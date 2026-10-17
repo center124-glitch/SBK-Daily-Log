@@ -1,0 +1,1994 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SBK บันทึกเหตุการณ์ประจำวัน v9 | Daily Log</title>
+<!--
+  SBK_Daily_Log_v9.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  v9: • ขยายพื้นที่แสดงผลเป็น 1500px (จอกว้างแสดงการ์ด 2 คอลัมน์) · ออกแบบการ์ดรายละเอียดเหตุการณ์ใหม่ + หัวกลุ่มวันแบบปฏิทิน
+  v8: • ใบรายงาน: ดูตัวอย่าง → ระบบตรวจความครบถ้วน → ติ๊กยืนยัน → ออกใบรายงาน (PDF / JPEG / พิมพ์) · ปรับสีสันใบรายงาน
+      • ตรวจซ้ำก่อนออกไฟล์ว่าข้อมูลยังตรงกับตัวอย่างที่ยืนยัน · รายละเอียดยาวเกินหน้าแบ่งต่อหน้าถัดไปอัตโนมัติ
+      • Error Handling: แยกสาเหตุเชื่อมต่อ (หมดเวลา/สิทธิ์ Deploy/เครือข่าย) · อ่านข้อผิดพลาดฝั่ง Code.gs · ตรวจนาฬิกา/เขตเวลาเครื่อง
+        กันส่งซ้อน · รวมข้อมูลหลายแท็บ · รองรับวันที่หลายรูปแบบจากชีต · จำกัดความยาวข้อความ · บันทึกต่อได้แม้พื้นที่เบราว์เซอร์เต็ม
+  v7: • หัวข้อเหตุการณ์เป็นดรอปดาวน์ตามประเภทเหตุการณ์ของ v3 (+ อื่นๆ ระบุเอง)
+      • การ์ดและหน้าต่างรายละเอียดเหตุการณ์ออกแบบใหม่ (สีตามหัวข้อ · ข้อมูลครบตามหัวคอลัมน์)
+      • ดึงข้อมูลกลับจาก Google Sheets (ทุกเครื่องเห็นข้อมูลเดียวกัน) + ตรวจยืนยันการซิงก์จริง + รับรู้การลบจากเครื่องอื่น
+      • รายงานสรุป A4 แนวนอนแบบทางการ: รายวัน / รายสัปดาห์ (จันทร์–อาทิตย์) / รายเดือน — PDF หลายหน้า + JPEG
+        สรุป KPI · เทียบช่วงก่อนหน้า · แยกตามหัวข้อ/ชั้น/ผู้แจ้ง/ช่วงเวลา · กราฟรายวัน · สรุปผล · ตารางรายละเอียด · ช่องลงนาม 3 ระดับ · เลขหน้า
+      • วันที่ภาษาไทยจัดรูปแบบเองทั้งหมด (ผลตรงกันทุกเครื่อง/ทุกเบราว์เซอร์) · เตือนบันทึกซ้ำ
+  v6: ฟอร์มตามหัวคอลัมน์ + ชั้น · ผู้แจ้งดรอปดาวน์ · v5: รายชื่อผู้แจ้ง 25 ท่าน · v4: ฝัง URL ถาวร · v3: PWA/Splash/พักหน้าจอ
+  คู่กับ backend: Code_Daily_Log_v7.gs (ชีต 9 คอลัมน์ + ชีตซ่อน _ลบแล้ว) — ใช้กับ v6 ได้ แต่ v7 แจ้งข้อผิดพลาดได้ครบกว่า
+-->
+<!-- ---------- PWA / ไอคอนแอป ---------- -->
+<meta name="theme-color" content="#4f46e5">
+<meta name="application-name" content="บันทึกเหตุการณ์">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="บันทึกเหตุการณ์">
+<link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%234f46e5%22%2F%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%238b5cf6%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ec4899%22%2F%3E%3C%2FlinearGradient%3E%3ClinearGradient%20id%3D%22c%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23fbbf24%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f97316%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%22112%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ccircle%20cx%3D%22430%22%20cy%3D%2270%22%20r%3D%22150%22%20fill%3D%22%23fff%22%20opacity%3D%22.1%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22470%22%20r%3D%22110%22%20fill%3D%22%23fff%22%20opacity%3D%22.06%22%2F%3E%3Crect%20x%3D%22124%22%20y%3D%22110%22%20width%3D%22236%22%20height%3D%22300%22%20rx%3D%2230%22%20fill%3D%22%23fff%22%2F%3E%3Crect%20x%3D%22186%22%20y%3D%2284%22%20width%3D%22112%22%20height%3D%2254%22%20rx%3D%2218%22%20fill%3D%22%23312e81%22%2F%3E%3Crect%20x%3D%22212%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2214%22%20rx%3D%227%22%20fill%3D%22%23a5b4fc%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22176%22%20width%3D%22164%22%20height%3D%2218%22%20rx%3D%229%22%20fill%3D%22%23818cf8%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22218%22%20width%3D%22128%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22256%22%20width%3D%22148%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22294%22%20width%3D%2296%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Ccircle%20cx%3D%22352%22%20cy%3D%22370%22%20r%3D%2284%22%20fill%3D%22url%28%23c%29%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2216%22%2F%3E%3Cpath%20d%3D%22M352%20324V372L384%20392%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2218%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E">
+<!-- iOS ไม่รองรับไอคอน SVG จึงฝัง PNG 180px ไว้ในไฟล์ (Safari อ่านตอนกด "เพิ่มไปยังหน้าจอโฮม") -->
+<link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- รายงาน: วาดทีละหน้าด้วย html2canvas แล้วรวมเป็น PDF ด้วย jsPDF (แทน html2pdf ที่ตัดหน้าเองไม่ได้) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: { fontFamily: { sans: ['Sarabun', 'sans-serif'], display: ['Prompt', 'Sarabun', 'sans-serif'] } } }
+  };
+</script>
+<style>
+  html { -webkit-tap-highlight-color: transparent; }
+  body { line-height: 1.7; background: #f1f5f9; }
+  .dark body { background: #0b1120; }
+  .modal-backdrop { transition: opacity .25s ease; }
+  .modal-panel { transition: opacity .25s ease, transform .25s ease; }
+  .toast { transition: opacity .3s ease, transform .3s ease; }
+  .card-in { animation: cardIn .35s ease both; }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .spinner { width: 1rem; height: 1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 9999px; animation: spin .7s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .inp { width: 100%; padding: .625rem .75rem; border-radius: .75rem; outline: none; background: #f1f5f9; }
+  .dark .inp { background: #0f172a; }
+  .inp:focus { box-shadow: 0 0 0 2px #a5b4fc; }
+  .glass { background: rgba(255,255,255,.82); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  .dark .glass { background: rgba(30,41,59,.78); }
+
+  /* ================= พื้นหลังเคลื่อนไหวของแดชบอร์ด ================= */
+  #bgFx { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  #bgFx .aur { position: absolute; border-radius: 9999px; filter: blur(70px); opacity: .45; will-change: transform; }
+  .dark #bgFx .aur { opacity: .32; }
+  #bgFx .a1 { width: 46vmax; height: 46vmax; left: -12vmax; top: -14vmax; background: #818cf8; animation: drift1 26s ease-in-out infinite alternate; }
+  #bgFx .a2 { width: 40vmax; height: 40vmax; right: -14vmax; top: 18vh; background: #f0abfc; animation: drift2 31s ease-in-out infinite alternate; }
+  #bgFx .a3 { width: 38vmax; height: 38vmax; left: 20vw; bottom: -18vmax; background: #5eead4; animation: drift3 35s ease-in-out infinite alternate; }
+  #bgFx .a4 { width: 24vmax; height: 24vmax; right: 18vw; top: -8vmax; background: #fcd34d; opacity: .25; animation: drift2 40s ease-in-out infinite alternate-reverse; }
+  @keyframes drift1 { to { transform: translate(14vw, 10vh) scale(1.15); } }
+  @keyframes drift2 { to { transform: translate(-12vw, 12vh) scale(.9); } }
+  @keyframes drift3 { to { transform: translate(-10vw, -14vh) scale(1.2); } }
+  #bgFx .grid-mask { position: absolute; inset: 0; opacity: .5;
+    background-image: linear-gradient(rgba(99,102,241,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,.07) 1px, transparent 1px);
+    background-size: 44px 44px; -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%); mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%); }
+  #bgCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .fx-paused #bgFx .aur { animation-play-state: paused; }
+  .kpi { position: relative; overflow: hidden; }
+  .kpi::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.28) 50%, transparent 65%); transform: translateX(-120%); animation: shine 6s ease-in-out infinite; }
+  .kpi:nth-child(2)::after { animation-delay: 1.5s; } .kpi:nth-child(3)::after { animation-delay: 3s; } .kpi:nth-child(4)::after { animation-delay: 4.5s; }
+  @keyframes shine { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+  /* ================= Splash / พักหน้าจอ ================= */
+  #splash { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;
+    color: #fff; background: radial-gradient(1200px 700px at 15% 10%, #312e81 0%, transparent 60%), radial-gradient(900px 600px at 90% 90%, #831843 0%, transparent 60%), #0b1026;
+    padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); user-select: none; -webkit-user-select: none; }
+  #splash.hidden { display: none; }
+  #splash.splash-in { animation: spIn .5s ease both; }
+  #splash.splash-out { animation: spOut .6s ease both; }
+  @keyframes spIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes spOut { to { opacity: 0; transform: scale(1.06); filter: blur(6px); } }
+  #splash .orb { position: absolute; border-radius: 9999px; filter: blur(60px); opacity: .55; }
+  #splash .o1 { width: 340px; height: 340px; background: #6366f1; left: -80px; top: 12%; animation: orb 9s ease-in-out infinite alternate; }
+  #splash .o2 { width: 300px; height: 300px; background: #ec4899; right: -60px; bottom: 8%; animation: orb 11s ease-in-out infinite alternate-reverse; }
+  #splash .o3 { width: 220px; height: 220px; background: #14b8a6; left: 45%; top: -60px; animation: orb 13s ease-in-out infinite alternate; }
+  @keyframes orb { to { transform: translate(60px, 40px) scale(1.25); } }
+  #splash .stars { position: absolute; inset: 0; background-image:
+      radial-gradient(1.5px 1.5px at 20% 30%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 70% 20%, #fff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 85% 60%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 35% 80%, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 55% 50%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 10% 70%, #fff 50%, transparent 51%);
+    opacity: .5; animation: twinkle 4s ease-in-out infinite alternate; }
+  @keyframes twinkle { to { opacity: .15; } }
+  .sp-logo-wrap { position: relative; width: 132px; height: 132px; margin: 0 auto; animation: logoPop .9s cubic-bezier(.2,1.4,.4,1) both; }
+  .sp-logo-wrap img { position: relative; width: 100%; height: 100%; border-radius: 30px; box-shadow: 0 20px 60px rgba(99,102,241,.55); animation: floaty 4s ease-in-out infinite; }
+  .sp-ring { position: absolute; inset: -14px; border-radius: 40px; background: conic-gradient(from 0deg, #6366f1, #ec4899, #f59e0b, #14b8a6, #6366f1); filter: blur(10px); opacity: .85; animation: spin 5s linear infinite; }
+  .sp-pulse { position: absolute; inset: -6px; border-radius: 36px; border: 2px solid rgba(255,255,255,.55); animation: pulse 2.2s ease-out infinite; }
+  @keyframes logoPop { from { opacity: 0; transform: scale(.4) rotate(-12deg); } to { opacity: 1; transform: none; } }
+  @keyframes floaty { 50% { transform: translateY(-8px); } }
+  @keyframes pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.45); opacity: 0; } }
+  .sp-title { animation: rise .8s .25s ease both; }
+  .sp-clock { font-variant-numeric: tabular-nums; letter-spacing: .02em; background: linear-gradient(90deg, #a5b4fc, #f0abfc, #fcd34d, #5eead4, #a5b4fc); background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: hue 6s linear infinite; filter: drop-shadow(0 6px 24px rgba(236,72,153,.35)); }
+  .sp-rise { animation: rise .8s .4s ease both; }
+  #searchInput { padding-left: 2.5rem; }
+  @keyframes hue { to { background-position: 300% 0; } }
+  .sp-date { animation: rise .8s .55s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .sp-bar { height: 4px; border-radius: 9999px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .sp-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #818cf8, #f472b6, #fbbf24); border-radius: inherit; }
+  .sp-bar.run > i { animation: fill var(--dur, 3s) linear forwards; }
+  @keyframes fill { to { width: 100%; } }
+  .sp-hint { animation: blinkHint 2s ease-in-out infinite; }
+  @keyframes blinkHint { 50% { opacity: .45; } }
+  #splash[data-mode="idle"] .sp-logo-wrap { width: 96px; height: 96px; }
+  #splash[data-mode="idle"] .sp-logo-wrap img { border-radius: 24px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    .sp-bar.run > i { width: 100%; }
+  }
+</style>
+</head>
+
+<body class="font-sans text-slate-800 dark:text-slate-100 transition-colors duration-300 min-h-screen">
+
+<!-- ================= Splash / พักหน้าจอ ================= -->
+<div id="splash" data-mode="intro" role="button" aria-label="แตะเพื่อเข้าสู่แอป">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="stars"></div>
+  <div class="relative text-center w-full max-w-md">
+    <div class="sp-logo-wrap"><div class="sp-ring"></div><div class="sp-pulse"></div><img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%234f46e5%22%2F%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%238b5cf6%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ec4899%22%2F%3E%3C%2FlinearGradient%3E%3ClinearGradient%20id%3D%22c%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23fbbf24%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f97316%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%22112%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ccircle%20cx%3D%22430%22%20cy%3D%2270%22%20r%3D%22150%22%20fill%3D%22%23fff%22%20opacity%3D%22.1%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22470%22%20r%3D%22110%22%20fill%3D%22%23fff%22%20opacity%3D%22.06%22%2F%3E%3Crect%20x%3D%22124%22%20y%3D%22110%22%20width%3D%22236%22%20height%3D%22300%22%20rx%3D%2230%22%20fill%3D%22%23fff%22%2F%3E%3Crect%20x%3D%22186%22%20y%3D%2284%22%20width%3D%22112%22%20height%3D%2254%22%20rx%3D%2218%22%20fill%3D%22%23312e81%22%2F%3E%3Crect%20x%3D%22212%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2214%22%20rx%3D%227%22%20fill%3D%22%23a5b4fc%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22176%22%20width%3D%22164%22%20height%3D%2218%22%20rx%3D%229%22%20fill%3D%22%23818cf8%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22218%22%20width%3D%22128%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22256%22%20width%3D%22148%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22294%22%20width%3D%2296%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Ccircle%20cx%3D%22352%22%20cy%3D%22370%22%20r%3D%2284%22%20fill%3D%22url%28%23c%29%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2216%22%2F%3E%3Cpath%20d%3D%22M352%20324V372L384%20392%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2218%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" alt="โลโก้แอป"></div>
+    <div class="sp-title mt-7">
+      <p class="text-xs tracking-[.35em] text-indigo-200/80 uppercase">Seacon Bangkae · Daily Log</p>
+      <h1 class="font-display font-bold text-2xl sm:text-3xl mt-1">บันทึกเหตุการณ์ประจำวัน</h1>
+      <p id="spGreet" class="text-sm text-white/70 mt-1"></p>
+    </div>
+    <div class="font-display font-extrabold text-6xl sm:text-7xl mt-6 leading-none sp-rise">
+      <span id="spHM" class="sp-clock">--:--</span><span id="spSec" class="sp-clock text-3xl sm:text-4xl align-top ml-1">:--</span>
+    </div>
+    <p id="spDate" class="sp-date font-display text-base sm:text-lg mt-3 text-white/90"></p>
+    <p id="spStats" class="hidden mt-4 inline-flex flex-wrap justify-center gap-2 text-xs"></p>
+    <div id="spBarWrap" class="mt-8 px-10"><div id="spBar" class="sp-bar"><i></i></div></div>
+    <p id="spHint" class="sp-hint text-xs text-white/60 mt-4">กำลังเข้าสู่ระบบ... แตะเพื่อเข้าทันที</p>
+  </div>
+  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v9</p>
+</div>
+
+<!-- ================= พื้นหลังเคลื่อนไหว ================= -->
+<div id="bgFx" aria-hidden="true">
+  <div class="aur a1"></div><div class="aur a2"></div><div class="aur a3"></div><div class="aur a4"></div>
+  <div class="grid-mask"></div>
+  <canvas id="bgCanvas"></canvas>
+</div>
+
+<div class="relative z-10">
+<!-- ================= ส่วนหัวแอป ================= -->
+<header class="sticky top-0 z-30 glass border-b border-white/60 dark:border-slate-800">
+  <div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%234f46e5%22%2F%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%238b5cf6%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ec4899%22%2F%3E%3C%2FlinearGradient%3E%3ClinearGradient%20id%3D%22c%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23fbbf24%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f97316%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%22112%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ccircle%20cx%3D%22430%22%20cy%3D%2270%22%20r%3D%22150%22%20fill%3D%22%23fff%22%20opacity%3D%22.1%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22470%22%20r%3D%22110%22%20fill%3D%22%23fff%22%20opacity%3D%22.06%22%2F%3E%3Crect%20x%3D%22124%22%20y%3D%22110%22%20width%3D%22236%22%20height%3D%22300%22%20rx%3D%2230%22%20fill%3D%22%23fff%22%2F%3E%3Crect%20x%3D%22186%22%20y%3D%2284%22%20width%3D%22112%22%20height%3D%2254%22%20rx%3D%2218%22%20fill%3D%22%23312e81%22%2F%3E%3Crect%20x%3D%22212%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2214%22%20rx%3D%227%22%20fill%3D%22%23a5b4fc%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22176%22%20width%3D%22164%22%20height%3D%2218%22%20rx%3D%229%22%20fill%3D%22%23818cf8%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22218%22%20width%3D%22128%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22256%22%20width%3D%22148%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22294%22%20width%3D%2296%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Ccircle%20cx%3D%22352%22%20cy%3D%22370%22%20r%3D%2284%22%20fill%3D%22url%28%23c%29%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2216%22%2F%3E%3Cpath%20d%3D%22M352%20324V372L384%20392%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2218%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" alt="" class="w-10 h-10 shrink-0 rounded-xl shadow-lg shadow-indigo-500/30">
+      <div class="min-w-0">
+        <h1 class="font-display font-semibold text-lg leading-tight truncate">บันทึกเหตุการณ์<span class="hidden sm:inline">ประจำวัน</span></h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 truncate"><span id="todayLabel"></span> · <span id="liveClock" class="tabular-nums"></span></p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnInstall" title="ติดตั้งแอปบนหน้าจอ" class="hidden h-10 px-3 rounded-xl border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition text-sm items-center gap-1.5">
+        <span>📲</span><span class="hidden md:inline">ติดตั้งแอป</span>
+      </button>
+      <button id="btnLock" title="พักหน้าจอ" class="hidden sm:inline-block w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">🕒</button>
+      <button id="btnSheetStatus" title="ตั้งค่า Google Sheets" class="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-sm flex items-center gap-1.5">
+        <span>☁️</span><span id="sheetStatusText" class="hidden sm:inline">Google Sheets</span>
+      </button>
+      <button id="btnTheme" title="สลับโหมดมืด/สว่าง" class="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">🌙</button>
+      <button id="btnNew" class="px-4 h-10 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition flex items-center gap-1.5">
+        <span class="text-lg leading-none">＋</span><span class="hidden sm:inline">บันทึกเหตุการณ์</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 space-y-5">
+
+  <!-- ================= KPI ================= -->
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="kpi rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600">
+      <p class="text-xs opacity-90">📚 บันทึกทั้งหมด</p>
+      <p class="text-2xl sm:text-3xl font-bold font-display"><span id="statTotal">0</span> <span class="text-sm font-normal">เหตุการณ์</span></p>
+    </div>
+    <div class="kpi rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br from-sky-500 to-blue-600">
+      <p class="text-xs opacity-90">📅 วันนี้</p>
+      <p class="text-2xl sm:text-3xl font-bold font-display"><span id="statToday">0</span> <span class="text-sm font-normal">เหตุการณ์</span></p>
+    </div>
+    <div class="kpi rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br from-emerald-500 to-teal-600">
+      <p class="text-xs opacity-90">🗓️ เดือนนี้</p>
+      <p class="text-2xl sm:text-3xl font-bold font-display"><span id="statMonth">0</span> <span class="text-sm font-normal">เหตุการณ์</span></p>
+    </div>
+    <div class="kpi rounded-2xl p-4 text-white shadow-lg bg-gradient-to-br from-orange-500 to-rose-500 min-w-0">
+      <p class="text-xs opacity-90">🏆 หัวข้อที่พบบ่อยสุดเดือนนี้</p>
+      <p id="statTopCat" class="font-display font-semibold text-base sm:text-lg leading-snug truncate">—</p>
+      <p id="statTopCount" class="text-xs opacity-90"></p>
+    </div>
+  </section>
+
+  <!-- ================= ค้นหา + ตัวกรอง ================= -->
+  <section class="glass rounded-2xl shadow-sm border border-white/70 dark:border-slate-700 p-4 space-y-3">
+    <div class="relative">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+      <input id="searchInput" type="search" placeholder="ค้นหาจากหัวข้อ รายละเอียด ผู้แจ้ง หรือหมายเหตุ..." class="inp pl-10">
+    </div>
+    <div id="rangeChips" class="flex flex-wrap gap-2"></div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <select id="filterMonth" class="inp text-sm"></select>
+      <select id="filterTopic" class="inp text-sm"></select>
+      <select id="filterFloor" class="inp text-sm"></select>
+      <select id="filterReporter" class="inp text-sm"></select>
+    </div>
+  </section>
+
+  <!-- ================= สรุปตามหัวข้อเหตุการณ์ (แตะเพื่อกรอง) ================= -->
+  <section id="topicSummary" class="flex flex-wrap gap-2"></section>
+
+  <!-- ================= แถบเครื่องมือ ================= -->
+  <section class="flex flex-wrap items-center justify-between gap-2">
+    <p id="resultInfo" class="text-sm text-slate-600 dark:text-slate-400"></p>
+    <div class="flex flex-wrap gap-2">
+      <button id="btnPull" class="glass px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center gap-1.5">🔄 <span>ดึงข้อมูลล่าสุด</span></button>
+      <button id="btnExportJson" class="glass px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition">⬇️ สำรอง</button>
+      <button id="btnImportJson" class="glass px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition">⬆️ นำเข้า</button>
+      <button id="btnReport" class="px-3 py-2 text-sm rounded-xl bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 transition flex items-center gap-1.5">📑 <span>รายงานสรุป A4</span></button>
+      <input id="fileImport" type="file" accept="application/json,.json" class="hidden">
+    </div>
+  </section>
+  <p id="pullInfo" class="-mt-3 text-xs text-slate-500 dark:text-slate-400"></p>
+
+  <!-- รายการจัดกลุ่มตามวัน (เหมือนสมุดบันทึก) -->
+  <section id="entryList" class="space-y-3"></section>
+
+  <section id="emptyState" class="hidden glass text-center py-16 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600">
+    <div class="text-5xl mb-3">📒</div>
+    <p id="emptyTitle" class="font-display font-semibold text-lg">ยังไม่มีบันทึก</p>
+    <p id="emptyDesc" class="text-sm text-slate-500 dark:text-slate-400 mt-1"></p>
+  </section>
+</main>
+
+<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v9 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
+</div>
+
+<!-- ================= Modal: เพิ่ม/แก้ไขบันทึก (ช่องตรงกับหัวคอลัมน์ในชีต) ================= -->
+<div id="entryModal" class="hidden fixed inset-0 z-40 items-end sm:items-center justify-center p-0 sm:p-4">
+  <div data-close="entryModal" class="modal-backdrop absolute inset-0 bg-slate-900/60 opacity-0"></div>
+  <div class="modal-panel relative w-full sm:max-w-xl max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl opacity-0 translate-y-4 scale-95">
+    <div class="sticky top-0 bg-white dark:bg-slate-800 px-5 pt-5 pb-3 flex items-center justify-between border-b border-slate-100 dark:border-slate-700 z-10">
+      <h2 id="modalTitle" class="font-display font-semibold text-lg">บันทึกเหตุการณ์ใหม่</h2>
+      <button data-close="entryModal" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">✕</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div class="grid grid-cols-3 gap-3">
+        <div class="col-span-2">
+          <label class="text-sm font-medium">ว/ด/ป - เวลา <span class="text-rose-500">*</span></label>
+          <input id="fDate" type="datetime-local" class="inp mt-1">
+        </div>
+        <div>
+          <label class="text-sm font-medium">ชั้น</label>
+          <select id="fFloor" class="inp mt-1"></select>
+        </div>
+      </div>
+      <!-- วัน / เดือน คำนวณจากวันที่อัตโนมัติ (ไม่ต้องกรอก) -->
+      <p id="fAuto" class="-mt-2 text-xs text-slate-500 dark:text-slate-400"></p>
+      <div>
+        <label class="text-sm font-medium">หัวข้อเหตุการณ์ <span class="text-rose-500">*</span></label>
+        <select id="fTopic" class="inp mt-1"></select>
+        <input id="fTitleOther" type="text" maxlength="120" placeholder="ระบุหัวข้อเหตุการณ์" class="inp mt-2 hidden">
+      </div>
+      <div>
+        <label class="text-sm font-medium">เหตุการณ์ประจำวัน (รายละเอียด) <span class="text-rose-500">*</span></label>
+        <textarea id="fContent" rows="5" maxlength="5000" placeholder="เกิดอะไรขึ้น ที่ไหน ใครเกี่ยวข้อง ดำเนินการอย่างไร..." class="inp mt-1 resize-y"></textarea>
+      </div>
+      <div>
+        <label class="text-sm font-medium">ผู้แจ้ง <span class="text-rose-500">*</span></label>
+        <select id="fReporter" class="inp mt-1"></select>
+      </div>
+      <div>
+        <label class="text-sm font-medium">หมายเหตุ</label>
+        <input id="fNote" type="text" maxlength="160" placeholder="เช่น SMS กลุ่ม Emergency" class="inp mt-1">
+      </div>
+      <p id="formError" class="hidden text-sm text-rose-600 dark:text-rose-400"></p>
+    </div>
+    <div class="sticky bottom-0 bg-white dark:bg-slate-800 px-5 py-4 flex gap-2 justify-end border-t border-slate-100 dark:border-slate-700">
+      <button data-close="entryModal" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">ยกเลิก</button>
+      <button id="btnSave" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium shadow hover:shadow-lg transition flex items-center gap-2">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: รายละเอียดเหตุการณ์ ================= -->
+<div id="detailModal" class="hidden fixed inset-0 z-40 items-end sm:items-center justify-center p-0 sm:p-4">
+  <div data-close="detailModal" class="modal-backdrop absolute inset-0 bg-slate-900/60 opacity-0"></div>
+  <div class="modal-panel relative w-full sm:max-w-xl max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl opacity-0 translate-y-4 scale-95">
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<!-- ================= Modal: รายงานสรุป A4 แนวนอน (ดูตัวอย่าง → ตรวจ → ยืนยัน → ออกใบรายงาน) ================= -->
+<div id="reportModal" class="hidden fixed inset-0 z-40 items-center justify-center p-0 sm:p-4">
+  <div data-close="reportModal" class="modal-backdrop absolute inset-0 bg-slate-900/70 opacity-0"></div>
+  <div class="modal-panel relative w-full h-full sm:h-[94vh] sm:max-w-6xl flex flex-col bg-white dark:bg-slate-800 sm:rounded-3xl shadow-2xl opacity-0 translate-y-4 scale-95 overflow-hidden">
+    <div class="px-4 sm:px-5 pt-4 pb-3 border-b border-slate-100 dark:border-slate-700 space-y-3 bg-gradient-to-r from-indigo-50 via-violet-50 to-pink-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800">
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="font-display font-semibold text-lg">📑 ใบรายงานสรุปเหตุการณ์ <span class="text-sm font-normal text-slate-500">(A4 แนวนอน)</span></h2>
+        <button data-close="reportModal" class="w-8 h-8 rounded-lg hover:bg-white/70 dark:hover:bg-slate-700">✕</button>
+      </div>
+      <div class="flex flex-wrap items-end gap-2">
+        <div>
+          <p class="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 mb-1">① เลือกชนิดและช่วงรายงาน</p>
+          <div id="rptType" class="inline-flex rounded-xl bg-white/80 dark:bg-slate-900 p-1 text-sm shadow-sm"></div>
+        </div>
+        <div id="rptDateWrap"><label class="block text-xs text-slate-500">เลือกวัน (รายสัปดาห์ = สัปดาห์ จ.–อา. ที่มีวันนี้)</label><input id="rptDate" type="date" class="inp text-sm py-2"></div>
+        <div id="rptMonthWrap" class="hidden"><label class="block text-xs text-slate-500">เลือกเดือน</label><select id="rptMonth" class="inp text-sm py-2"></select></div>
+        <p id="rptPeriod" class="text-sm font-medium text-slate-700 dark:text-slate-200 flex-1 min-w-[12rem] pb-2"></p>
+      </div>
+    </div>
+    <div class="flex-1 min-h-0 flex flex-col lg:flex-row">
+      <!-- ② ตัวอย่างใบรายงาน -->
+      <div class="flex-1 min-h-0 flex flex-col">
+        <p class="px-4 pt-2 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">② ตรวจสอบตัวอย่างใบรายงาน <span id="rptPages" class="font-normal text-slate-500"></span></p>
+        <div id="rptPreview" class="flex-1 overflow-auto bg-slate-200 dark:bg-slate-900 p-3 sm:p-4 space-y-4 m-2 rounded-xl"></div>
+      </div>
+      <!-- ③ ผลตรวจ + ยืนยัน + ④ ออกใบรายงาน -->
+      <aside class="lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-700 p-4 space-y-3 overflow-y-auto max-h-[40vh] lg:max-h-none">
+        <div id="rptChecks" class="rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 p-3 space-y-1"></div>
+        <label class="flex items-start gap-2 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-900/20 p-3 cursor-pointer">
+          <input id="rptConfirm" type="checkbox" class="mt-1 w-4 h-4 accent-indigo-600">
+          <span class="text-sm"><b>③ ยืนยัน:</b> ข้าพเจ้าได้ตรวจสอบตัวอย่างใบรายงานแล้ว ข้อมูลถูกต้องครบถ้วน</span>
+        </label>
+        <div>
+          <p class="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 mb-1">④ ออกใบรายงาน</p>
+          <div class="grid grid-cols-3 lg:grid-cols-1 gap-2">
+            <button id="btnRptPdf" class="px-3 py-2.5 text-sm rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium flex items-center justify-center gap-1.5">📄 <span>ออกใบรายงาน PDF</span></button>
+            <button id="btnRptJpg" class="px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center gap-1.5">🖼️ <span>ภาพ JPEG</span></button>
+            <button id="btnRptPrint" class="px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center gap-1.5">🖨️ <span>พิมพ์</span></button>
+          </div>
+          <p id="rptIssueHint" class="text-xs text-slate-500 mt-2"></p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: ตั้งค่า ================= -->
+<div id="sheetModal" class="hidden fixed inset-0 z-40 items-center justify-center p-4">
+  <div data-close="sheetModal" class="modal-backdrop absolute inset-0 bg-slate-900/60 opacity-0"></div>
+  <div class="modal-panel relative w-full max-w-lg max-h-[92vh] overflow-y-auto bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 space-y-4 opacity-0 translate-y-4 scale-95">
+    <div class="flex items-center justify-between">
+      <h2 class="font-display font-semibold text-lg">☁️ ตั้งค่า Google Sheets และหน้าจอ</h2>
+      <button data-close="sheetModal" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">✕</button>
+    </div>
+    <p class="text-sm text-slate-500 dark:text-slate-400">แอปเชื่อมกับ Google Sheets ผ่าน <b>Code_Daily_Log_v7.gs</b> ไว้แล้ว (9 คอลัมน์: ว/ด/ป · เวลา · วัน · เดือน · ชั้น · หัวข้อเหตุการณ์ · รายละเอียด · ผู้แจ้ง · หมายเหตุ) ทุกครั้งที่บันทึก/แก้ไข/ลบ ระบบจะส่งข้อมูลขึ้นชีตให้อัตโนมัติ</p>
+    <div>
+      <label class="text-sm font-medium">Web App URL <span class="text-xs text-emerald-600 dark:text-emerald-400">🔒 ฝังในโค้ดแล้ว</span></label>
+      <input id="setUrl" type="url" readonly class="inp mt-1 text-xs text-slate-500 cursor-not-allowed">
+    </div>
+    <div>
+      <label class="text-sm font-medium">รหัสผ่านยืนยัน (Token) — ถ้าตั้งไว้ใน Code.gs</label>
+      <input id="setToken" type="text" placeholder="เว้นว่างได้" class="inp mt-1 text-sm">
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="text-sm font-medium">ผู้แจ้งประจำเครื่องนี้ (เติมให้อัตโนมัติ)</label>
+        <input id="setReporter" list="reporterList" type="text" maxlength="60" class="inp mt-1 text-sm">
+        <datalist id="reporterList"></datalist>
+      </div>
+      <div>
+        <label class="text-sm font-medium">พักหน้าจอเมื่อไม่ใช้งาน</label>
+        <select id="setIdle" class="inp mt-1 text-sm">
+          <option value="3">3 นาที</option><option value="4">4 นาที</option><option value="5">5 นาที</option><option value="0">ปิดการพักหน้าจอ</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <div class="flex items-center justify-between gap-2">
+        <label class="text-sm font-medium">รายชื่อผู้แจ้ง (บรรทัดละ 1 ชื่อ)</label>
+        <button id="btnResetReporters" type="button" class="text-xs text-indigo-600 dark:text-indigo-300 hover:underline">↺ คืนค่ารายชื่อตั้งต้น</button>
+      </div>
+      <textarea id="setReporters" rows="6" class="inp mt-1 text-sm resize-y" placeholder="นาย สุนทร อินเดช"></textarea>
+    </div>
+    <p id="syncSummary" class="text-sm rounded-xl bg-slate-100 dark:bg-slate-900 px-3 py-2"></p>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <button id="btnSaveSettings" class="py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium flex items-center justify-center gap-2">บันทึกการตั้งค่า</button>
+      <button id="btnTest" class="py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center gap-2">ทดสอบ</button>
+      <button id="btnSyncAll" class="py-2.5 rounded-xl border border-emerald-500 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 flex items-center justify-center gap-2">ซิงก์ทั้งหมด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: ยืนยันการลบ ================= -->
+<div id="confirmModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
+  <div data-close="confirmModal" class="modal-backdrop absolute inset-0 bg-slate-900/60 opacity-0"></div>
+  <div class="modal-panel relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 text-center opacity-0 translate-y-4 scale-95">
+    <div class="text-4xl mb-2">🗑️</div>
+    <h3 class="font-display font-semibold text-lg">ยืนยันการลบบันทึก</h3>
+    <p id="confirmText" class="text-sm text-slate-500 dark:text-slate-400 mt-1 break-words"></p>
+    <p class="text-sm text-rose-600 dark:text-rose-400 mt-1">การลบไม่สามารถย้อนกลับได้ (หากเชื่อม Google Sheets จะลบแถวในชีตด้วย)</p>
+    <div class="mt-5 flex gap-2">
+      <button data-close="confirmModal" class="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">ยกเลิก</button>
+      <button id="btnConfirmDelete" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium transition">ลบบันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: วิธีติดตั้งบน iPhone/iPad ================= -->
+<div id="iosModal" class="hidden fixed inset-0 z-50 items-end sm:items-center justify-center p-4">
+  <div data-close="iosModal" class="modal-backdrop absolute inset-0 bg-slate-900/60 opacity-0"></div>
+  <div class="modal-panel relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 text-center opacity-0 translate-y-4 scale-95">
+    <img src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20512%20512%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%234f46e5%22%2F%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%238b5cf6%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ec4899%22%2F%3E%3C%2FlinearGradient%3E%3ClinearGradient%20id%3D%22c%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23fbbf24%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f97316%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22512%22%20height%3D%22512%22%20rx%3D%22112%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ccircle%20cx%3D%22430%22%20cy%3D%2270%22%20r%3D%22150%22%20fill%3D%22%23fff%22%20opacity%3D%22.1%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%22470%22%20r%3D%22110%22%20fill%3D%22%23fff%22%20opacity%3D%22.06%22%2F%3E%3Crect%20x%3D%22124%22%20y%3D%22110%22%20width%3D%22236%22%20height%3D%22300%22%20rx%3D%2230%22%20fill%3D%22%23fff%22%2F%3E%3Crect%20x%3D%22186%22%20y%3D%2284%22%20width%3D%22112%22%20height%3D%2254%22%20rx%3D%2218%22%20fill%3D%22%23312e81%22%2F%3E%3Crect%20x%3D%22212%22%20y%3D%22100%22%20width%3D%2260%22%20height%3D%2214%22%20rx%3D%227%22%20fill%3D%22%23a5b4fc%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22176%22%20width%3D%22164%22%20height%3D%2218%22%20rx%3D%229%22%20fill%3D%22%23818cf8%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22218%22%20width%3D%22128%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22256%22%20width%3D%22148%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Crect%20x%3D%22160%22%20y%3D%22294%22%20width%3D%2296%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%23c7d2fe%22%2F%3E%3Ccircle%20cx%3D%22352%22%20cy%3D%22370%22%20r%3D%2284%22%20fill%3D%22url%28%23c%29%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2216%22%2F%3E%3Cpath%20d%3D%22M352%20324V372L384%20392%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2218%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" alt="" class="w-16 h-16 mx-auto rounded-2xl shadow-lg">
+    <h3 class="font-display font-semibold text-lg mt-3">ติดตั้งแอปบน iPhone / iPad</h3>
+    <ol class="text-sm text-left mt-3 space-y-1.5 text-slate-600 dark:text-slate-300 list-decimal pl-5">
+      <li>เปิดหน้านี้ด้วย <b>Safari</b></li>
+      <li>แตะปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรขึ้น)</li>
+      <li>เลือก <b>"เพิ่มไปยังหน้าจอโฮม"</b> แล้วกด <b>เพิ่ม</b></li>
+    </ol>
+    <button data-close="iosModal" class="mt-5 w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium">เข้าใจแล้ว</button>
+  </div>
+</div>
+
+<div id="toastBox" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[110] flex flex-col gap-2 items-center w-full px-4 pointer-events-none"></div>
+<div id="reportHost" style="position:absolute; left:-10000px; top:0;"></div>
+
+<script>
+/* =====================================================================
+   SBK บันทึกเหตุการณ์ประจำวัน v9 — Single File App
+   โครงสร้าง: ค่าคงที่ → State → Storage → Utilities → Sheets Sync → Render → Modal → ฟอร์ม
+             → Export/Import → Theme → PWA → Splash/พักหน้าจอ → พื้นหลังเคลื่อนไหว → Event → Init
+   ===================================================================== */
+
+/* ---------- 1) ค่าคงที่ ---------- */
+const APP_VERSION  = 'v9';
+// เวอร์ชัน Code.gs ที่ต้องมี: เขียนข้อมูล (9 คอลัมน์) ได้ตั้งแต่ v5, ดึงข้อมูลกลับจากชีตได้ตั้งแต่ v6
+const BACKEND_MIN_WRITE = 5, BACKEND_MIN_PULL = 6;
+// Web App URL ของ Code.gs — ฝังถาวร ทุกเครื่องที่เปิดแอปจะส่ง/ดึงข้อมูลจากชีตเดียวกัน
+// (ถ้า Deploy ใหม่แล้ว URL เปลี่ยน ให้แก้ค่านี้ที่เดียว)
+const GAS_URL      = 'https://script.google.com/macros/s/AKfycbwSrvFd1eD0MXVtFjO7IbDYrPH3exSaaz2c4eqW_xmG1adUvNn9ohCbMu7e7IbAdEIATA/exec';
+// ใช้ key เดิมจาก v1/v2 เพื่อให้บันทึกเก่ายังอยู่ครบเมื่ออัปเกรด
+const STORAGE_KEY  = 'dailyJournal.entries.v1';
+const THEME_KEY    = 'dailyJournal.theme';
+const SETTINGS_KEY = 'workJournal.settings';
+const DELQ_KEY     = 'workJournal.pendingDeletes';
+const SCHEMA_KEY   = 'workJournal.sheetSchema';
+const PULL_KEY     = 'workJournal.lastPull';
+const ERRSEEN_KEY  = 'workJournal.lastErrorSeen';
+const MAX_CONTENT  = 5000; // ความยาวรายละเอียดสูงสุด (ชีตรับได้ 50,000 ตัวอักษรต่อเซลล์ แต่รายงาน A4 ควรกระชับ)
+const SPLASH_MS    = 3000;   // แสดงโลโก้ 3 วินาที (อยู่ในช่วง 2–4 วินาทีตามที่กำหนด)
+const IDLE_DEFAULT = 4;      // นาที (ตั้งได้ 3/4/5)
+const LOGO_SVG     = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset=".55" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient><linearGradient id="c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#f97316"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#g)"/><circle cx="430" cy="70" r="150" fill="#fff" opacity=".1"/><circle cx="60" cy="470" r="110" fill="#fff" opacity=".06"/><rect x="124" y="110" width="236" height="300" rx="30" fill="#fff"/><rect x="186" y="84" width="112" height="54" rx="18" fill="#312e81"/><rect x="212" y="100" width="60" height="14" rx="7" fill="#a5b4fc"/><rect x="160" y="176" width="164" height="18" rx="9" fill="#818cf8"/><rect x="160" y="218" width="128" height="16" rx="8" fill="#c7d2fe"/><rect x="160" y="256" width="148" height="16" rx="8" fill="#c7d2fe"/><rect x="160" y="294" width="96" height="16" rx="8" fill="#c7d2fe"/><circle cx="352" cy="370" r="84" fill="url(#c)" stroke="#fff" stroke-width="16"/><path d="M352 324V372L384 392" stroke="#fff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
+const ORG_NAME     = 'ศูนย์การค้าซีคอนบางแค';
+
+// หัวข้อเหตุการณ์ = ประเภทเหตุการณ์ชุดเดียวกับ v3 (ค่าที่ลงชีตคือ label ไม่มี emoji)
+const TOPICS = [
+  { label: 'เจ็บป่วย / ปฐมพยาบาล',                 icon: '🚑', color: '#ef4444' },
+  { label: 'บริการลูกค้า (เก้าอี้เลื่อน/วีลแชร์)',   icon: '♿', color: '#0ea5e9' },
+  { label: 'ผู้รับเหมา / Hot Work',                  icon: '🛠️', color: '#f59e0b' },
+  { label: 'อุบัติเหตุ / เหตุผิดปกติ',               icon: '⚠️', color: '#f97316' },
+  { label: 'ความปลอดภัย',                            icon: '🛡️', color: '#8b5cf6' },
+  { label: 'ชำรุด / ซ่อมบำรุง',                      icon: '🔧', color: '#64748b' },
+  { label: 'ร้องเรียน / ข้อเสนอแนะ',                 icon: '📣', color: '#ec4899' },
+  { label: 'กิจกรรม / ประชาสัมพันธ์',                icon: '🎪', color: '#a855f7' },
+  { label: 'เหตุการณ์ทั่วไป',                        icon: '📝', color: '#6366f1' }
+];
+// หัวข้อที่พิมพ์เอง (หรือบันทึกเก่าก่อน v7) จัดกลุ่มเป็น "อื่นๆ" ในสถิติ แต่แสดงข้อความจริงตามที่บันทึก
+const OTHER_TOPIC = { label: 'อื่นๆ', icon: '📦', color: '#94a3b8' };
+const OTHER_KEY = '__other';
+const topicOf = (title) => TOPICS.find(t => t.label === title) || OTHER_TOPIC;
+
+// ตัวเลือกชั้น — อ้างอิงชั้นที่ปรากฏจริงในสมุดบันทึกปี 2569 (B, 1–6, ดาดฟ้า) + พื้นที่ภายนอกอาคาร
+const FLOORS = ['B', '1', '2', '3', '4', '5', '6', 'ดาดฟ้า', 'ภายนอกอาคาร'];
+const floorLabel = (f) => !f ? 'ไม่ระบุชั้น' : (/^[B0-9]$/.test(f) ? `ชั้น ${f}` : f);
+// รายชื่อผู้แจ้งตามไฟล์รายชื่อที่ได้รับ (25 ท่าน) — แก้เพิ่ม/ลบได้ในหน้าตั้งค่า
+const DEFAULT_REPORTERS = [
+  'นาย สิทธิเดช สืบศรี', 'นาย ทัศนัย พาหา', 'นาย นพฤทธิ์ กียะสูต', 'นาย กฤษฎา ศรีมุม', 'นาย สุนทร อินเดช',
+  'นาย นิพัต มุสันเที๊ยะ', 'นาย จักรินทร์ สินพันธ์', 'น.ส.อรณิชชา ปานกำเหนิด', 'นาย อรัญ สุวรรณธาดา', 'นาย ไพรัตน์ เพียงตน',
+  'นาย สุธรรม ทองปรวน', 'นาย มาโนช ทุยเวียง', 'นาย สุวัฒน์ สงพิมพ์', 'นาย วัชระ วิลานันท์', 'นาย ปัญญาณวัฒน์ อินเดช',
+  'นาย พลภัทร วัฒนอเนก', 'นาย พีรวัฒน์ ฉลูศรี', 'นาย สุธิราช พรหมพิทักษ์', 'นาย สวัสดิ์ อ่อนน้อมดี', 'นาย ดำรงศักดิ์ กลั่นจิตต์',
+  'นาย บีช จันทร์ตรี', 'นาย นฤพล ธนินท์ณัฐกุล', 'นาย ธนบูรย์ อวดปาก', 'นาย สุธีร์ ทองเปลี่ยว', 'นาย บริพัตร เพชรดี'
+];
+const REPORTERS_VER = 5; // เปลี่ยนเลขนี้เมื่อแก้รายชื่อตั้งต้น เพื่อให้ทุกเครื่องได้รายชื่อใหม่
+const RANGES = { '': 'ทั้งหมด', today: 'วันนี้', yesterday: 'เมื่อวาน', week: 'สัปดาห์นี้', month: 'เดือนนี้' };
+const BULK_SIZE = 40; // ส่งขึ้นชีตทีละไม่เกิน 40 แถว กันเกินขนาด payload ของ Apps Script
+
+/* ---------- 2) State ---------- */
+let entries = [];
+let settings = { url: GAS_URL, token: '', reporter: '', reporters: [...DEFAULT_REPORTERS], reportersVer: REPORTERS_VER, idleMin: IDLE_DEFAULT };
+let pendingDeletes = [];
+let filterRange = '', filterMonth = '', filterTopic = '', filterReporter = '', filterFloor = '', searchText = '';
+let editingId = null, pendingDeleteId = null, detailId = null;
+let backendVer = null, backendInfo = null, lastPull = 0, pulling = null, syncing = null, lastPullError = '';
+// รหัสที่ลบ/ถูกตัดออกในแท็บนี้ — ใช้ตอนรวมข้อมูลกับแท็บอื่น (กันรายการที่ลบไปแล้วถูกดึงกลับมาจาก localStorage)
+const removedIds = new Set();
+const expanded = new Set();
+
+/* ---------- 3) Storage ---------- */
+// ห่อ try/catch เพราะโหมดส่วนตัวบางเบราว์เซอร์จะ throw เมื่อเข้าถึง localStorage
+function readJson(key, fallback) {
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (e) { return fallback; }
+}
+function writeJson(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) { return false; }
+}
+const cleanName = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+// แปลงบันทึกเก่า (v1–v6) ให้เหลือเฉพาะฟิลด์ตามหัวคอลัมน์ในชีต + ชั้น
+// ฟิลด์ที่ถูกตัด (พื้นที่ / การดำเนินการ) ต่อท้ายในรายละเอียด — ข้อความเดียวกับที่ v4/v5 เคยส่งขึ้นชีต จึงไม่มีข้อมูลหาย
+function extractFloor(text) {
+  const m = String(text || '').match(/ชั้น\s*\.?\s*(B|[1-6]|ดาดฟ้า)/i);
+  return m ? m[1].toUpperCase() : '';
+}
+function normalizeEntry(e) {
+  const str = (v) => typeof v === 'string' ? v : '';
+  let content = str(e.content);
+  const area = str(e.area), action = str(e.action);
+  if (area && !content.includes(`พื้นที่: ${area}`)) content += `\nพื้นที่: ${area}`;
+  if (action && !content.includes(`การดำเนินการ: ${action}`)) content += `\nการดำเนินการ: ${action}`;
+  const floor = FLOORS.includes(e.floor) ? e.floor : extractFloor(area || e.title);
+  return {
+    id: e.id, datetime: e.datetime, floor, title: cleanName(e.title), content: content.trim(),
+    reporter: cleanName(e.reporter), note: str(e.note) || str(e.channel),
+    createdAt: str(e.createdAt), updatedAt: str(e.updatedAt), sync: e.sync
+  };
+}
+function isValidEntry(e) {
+  return e && typeof e === 'object' && typeof e.id === 'string' && !isNaN(new Date(e.datetime).getTime()) &&
+         typeof e.title === 'string' && typeof e.content === 'string';
+}
+function loadAll() {
+  const data = readJson(STORAGE_KEY, []);
+  entries = (Array.isArray(data) ? data.filter(isValidEntry) : []).map(normalizeEntry);
+  const stored = readJson(SETTINGS_KEY, {}) || {};
+  settings = { ...settings, ...stored };
+  settings.url = GAS_URL; // URL ฝังถาวร — ไม่ใช้ค่าที่เคยบันทึกในเครื่อง (กันเครื่องเก่าส่งไปผิดชีต)
+  // เครื่องที่ยังเก็บรายชื่อชุดเก่า (v4: ชื่อเล่น 6 ชื่อ) → แทนด้วยรายชื่อชุดใหม่ 25 ท่านครั้งเดียว
+  if (stored.reportersVer !== REPORTERS_VER || !Array.isArray(settings.reporters) || !settings.reporters.length) {
+    settings.reporters = [...DEFAULT_REPORTERS];
+    settings.reportersVer = REPORTERS_VER;
+    if (!settings.reporters.includes(settings.reporter)) settings.reporter = '';
+    writeJson(SETTINGS_KEY, settings);
+  }
+  if (![0, 3, 4, 5].includes(Number(settings.idleMin))) settings.idleMin = IDLE_DEFAULT;
+  settings.idleMin = Number(settings.idleMin);
+  const dq = readJson(DELQ_KEY, []);
+  pendingDeletes = Array.isArray(dq) ? dq : [];
+  lastPull = Number(readJson(PULL_KEY, 0)) || 0;
+}
+// เปิดแอปหลายแท็บในเครื่องเดียวกัน: ก่อนเขียนให้รวมรายการที่แท็บอื่นเพิ่มไว้ (ไม่งั้นแท็บที่บันทึกทีหลังจะเขียนทับจนรายการหาย)
+function mergeFromStorage() {
+  const stored = readJson(STORAGE_KEY, []);
+  if (!Array.isArray(stored)) return 0;
+  const ids = new Set(entries.map(e => e.id));
+  let n = 0;
+  stored.filter(isValidEntry).forEach(s => { if (!ids.has(s.id) && !removedIds.has(s.id)) { entries.push(normalizeEntry(s)); n++; } });
+  return n;
+}
+let storageWarned = false;
+function saveEntries() {
+  mergeFromStorage();
+  if (writeJson(STORAGE_KEY, entries)) { storageWarned = false; return true; }
+  // พื้นที่เต็ม/ถูกปิด: ข้อมูลยังอยู่ในหน่วยความจำและถูกส่งขึ้นชีตตามปกติ แจ้งเตือนครั้งเดียวไม่ให้รบกวน
+  if (!storageWarned) toast('บันทึกลงเบราว์เซอร์ไม่สำเร็จ (พื้นที่เต็มหรือถูกปิดใช้งาน) ข้อมูลยังถูกส่งขึ้น Google Sheets ตามปกติ — แนะนำกด "สำรอง"', 'error');
+  storageWarned = true;
+  return false;
+}
+
+/* ---------- 4) Utilities ---------- */
+const $ = (id) => document.getElementById(id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = (n) => String(n).padStart(2, '0');
+function esc(s) { // กัน XSS ก่อนแทรกลง innerHTML
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+const TH_DAYS = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+const TH_DAYS_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+// จัดรูปแบบวันที่เอง (ไม่พึ่ง locale ของเบราว์เซอร์) — ผลลัพธ์จึงเหมือนกันทุกเครื่อง ทุกระบบปฏิบัติการ
+const toD = (x) => x instanceof Date ? x : new Date(x);
+const fmtDate = (x) => { const d = toD(x); return `${TH_DAYS[d.getDay()]}ที่ ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`; };
+const fmtDateNoDay = (x) => { const d = toD(x); return `${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`; };
+const fmtWeekday = (x) => TH_DAYS[toD(x).getDay()];
+const fmtClock = (x) => { const d = toD(x); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtMonth = (y, m) => `${TH_MONTHS[m]} ${y + 543}`;
+// รูปแบบเดียวกับสมุดบันทึกเดิมในชีต: "1/1/2569" และ "11.30 น." (พ.ศ. = ค.ศ. + 543)
+const sheetDate = (d) => `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
+const sheetTime = (d) => `${pad(d.getHours())}.${pad(d.getMinutes())} น.`;
+const sheetMonth = (d) => `${TH_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`;
+// datetime-local ต้องการเวลาท้องถิ่น "YYYY-MM-DDTHH:mm" จึงห้ามใช้ toISOString ตรงๆ (จะเพี้ยนเป็น UTC)
+function toLocalInput(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+const toDateInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const dayKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const monthKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+const sameDay = (a, b) => dayKey(a) === dayKey(b);
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+// สัปดาห์เริ่มวันจันทร์ (getDay: อาทิตย์=0) — ใช้ร่วมกันทั้งตัวกรอง "สัปดาห์นี้" และรายงานรายสัปดาห์ ให้ตัวเลขตรงกัน
+const startOfWeek = (d) => addDays(startOfDay(d), -((d.getDay() + 6) % 7));
+const initials = (n) => { const s = cleanName(n).replace(/^(นางสาว|นาย|นาง|น\.ส\.)\s*/, ''); return s ? s[0] : '?'; };
+function toast(msg, type = 'success') {
+  const colors = { success: 'bg-emerald-600', error: 'bg-rose-600', info: 'bg-slate-700' };
+  const icons = { success: '✅', error: '⚠️', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast pointer-events-auto max-w-md px-4 py-3 rounded-xl text-white text-sm shadow-xl opacity-0 translate-y-2 ${colors[type]}`;
+  el.textContent = `${icons[type]} ${msg}`;
+  $('toastBox').appendChild(el);
+  requestAnimationFrame(() => el.classList.remove('opacity-0', 'translate-y-2'));
+  setTimeout(() => { el.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => el.remove(), 300); }, 4000);
+}
+function setLoading(btn, loading, text) {
+  if (loading) {
+    btn.dataset.html = btn.innerHTML; btn.disabled = true;
+    btn.classList.add('opacity-70', 'cursor-not-allowed');
+    btn.innerHTML = `<span class="spinner"></span><span>${text}</span>`;
+  } else {
+    btn.disabled = false; btn.classList.remove('opacity-70', 'cursor-not-allowed');
+    if (btn.dataset.html) btn.innerHTML = btn.dataset.html;
+  }
+}
+// fetch ที่มีเวลาหมด — กันหน้าค้างเมื่อสัญญาณอินเทอร์เน็ตไม่เสถียร
+// แยกสาเหตุให้ชัด: หมดเวลา / ได้หน้า HTML (มักเป็นหน้าล็อกอินเพราะ Deploy ไม่ได้ตั้ง Anyone) / เครือข่ายล้มเหลว
+async function fetchJson(url, ms = 20000) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: ctl.signal, cache: 'no-store' });
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch (e) { const err = new Error(/<html|<!doctype/i.test(text) ? 'NOT_JSON_HTML' : 'NOT_JSON'); err.code = err.message; throw err; }
+  } catch (e) {
+    if (e.name === 'AbortError') { const err = new Error('TIMEOUT'); err.code = 'TIMEOUT'; throw err; }
+    if (!e.code) e.code = 'NETWORK';
+    throw e;
+  } finally { clearTimeout(t); }
+}
+function netErrorText(e) {
+  return { TIMEOUT: 'เชื่อมต่อ Google Sheets นานเกินไป (สัญญาณอินเทอร์เน็ตอ่อน)', NOT_JSON_HTML: 'Google ตอบกลับเป็นหน้าเว็บแทนข้อมูล — ตรวจสอบว่า Deploy ตั้ง "Who has access: Anyone"',
+           NOT_JSON: 'ข้อมูลตอบกลับจาก Google ไม่ถูกต้อง', NETWORK: 'เชื่อมต่ออินเทอร์เน็ตไม่ได้' }[e && e.code] || String(e && e.message || e);
+}
+const verNum = (v) => Number(String(v || '').replace(/\D/g, '')) || 0;
+
+/* ---------- 5) Google Sheets Sync ---------- */
+// แปลงบันทึกเป็นแถวในชีต 9 คอลัมน์ — คีย์ต้องตรงกับ COLUMNS ใน Code.gs
+// วัน / เดือน คำนวณจากวันที่จริง (ไม่ให้ผู้ใช้กรอกเอง กันวันในสัปดาห์ผิด)
+function toSheetPayload(e) {
+  const d = new Date(e.datetime);
+  return {
+    id: e.id,
+    date: sheetDate(d), time: sheetTime(d), weekday: fmtWeekday(d), month: sheetMonth(d),
+    floor: e.floor || '', title: e.title, content: e.content, reporter: e.reporter, note: e.note
+  };
+}
+// แปลงแถวจากชีตกลับเป็นบันทึก — วันที่ในชีตเป็น พ.ศ. "d/m/yyyy" ต้อง normalize เป็น ค.ศ. ก่อนสร้าง Date
+// รองรับรูปแบบที่อาจเกิดจากการแก้ไขในชีตโดยตรง: d/m/yyyy (พ.ศ. หรือ ค.ศ.), yyyy-mm-dd, เวลา 8.05 / 08:05 / 8.5
+function rowToEntry(r) {
+  if (!r || !r.id) return null;
+  const ds = String(r.date || '').trim(), ts = String(r.time || '').trim();
+  let y, mo, da;
+  let m1 = ds.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/), m2 = ds.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m1) { da = +m1[1]; mo = +m1[2]; y = +m1[3]; } else if (m2) { y = +m2[1]; mo = +m2[2]; da = +m2[3]; } else return { bad: true, id: String(r.id), why: `ว/ด/ป "${ds}"` };
+  if (y > 2400) y -= 543; // พ.ศ. → ค.ศ.
+  const tm = ts.match(/^(\d{1,2})[.:](\d{1,2})/);
+  if (ts && !tm) return { bad: true, id: String(r.id), why: `เวลา "${ts}"` };
+  const hh = tm ? +tm[1] : 0, mm = tm ? +tm[2] : 0;
+  if (hh > 23 || mm > 59) return { bad: true, id: String(r.id), why: `เวลา "${ts}"` };
+  const d = new Date(y, mo - 1, da, hh, mm);
+  if (isNaN(d) || d.getDate() !== da || d.getMonth() !== mo - 1 || y < 2000 || y > 2100) return { bad: true, id: String(r.id), why: `ว/ด/ป "${ds}"` }; // กันวันที่ผิดรูป เช่น 31/2
+  const floor = String(r.floor || '').trim().toUpperCase().replace(/^ชั้น\s*/, '');
+  return {
+    id: String(r.id), datetime: d.toISOString(), floor: FLOORS.includes(floor) ? floor : (FLOORS.includes(r.floor) ? r.floor : ''),
+    title: cleanName(r.title), content: String(r.content || '').trim(), reporter: cleanName(r.reporter), note: String(r.note || '').trim()
+  };
+}
+// ใช้ mode:'no-cors' ตามข้อจำกัดของ Apps Script — อ่านผลตอบกลับไม่ได้
+// จึงถือว่า "ส่งแล้ว" เมื่อ fetch ไม่ throw และยืนยันผลจริงอีกครั้งตอนดึงข้อมูลกลับ (pullFromSheet)
+async function sheetPost(body) {
+  // รู้แน่ชัดว่า Code.gs บนเซิร์ฟเวอร์เก่ากว่าที่รองรับ → ไม่ส่ง (กันข้อมูลลงผิดคอลัมน์) เก็บเป็น "รอซิงก์" ไว้ก่อน
+  if (backendVer !== null && backendVer >= 0 && backendVer < BACKEND_MIN_WRITE) return false;
+  if (!navigator.onLine) return false;
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ token: settings.token || '', ...body })
+    });
+    return true;
+  } catch (e) { return false; }
+}
+async function syncEntry(entry) {
+  const ok = await sheetPost({ action: 'upsert', entry: toSheetPayload(entry) });
+  entry.sync = ok ? 'ok' : 'pending';
+  saveEntries(); render();
+  return ok;
+}
+async function syncDelete(id) {
+  const ok = await sheetPost({ action: 'delete', id });
+  if (!ok && !pendingDeletes.includes(id)) { pendingDeletes.push(id); writeJson(DELQ_KEY, pendingDeletes); }
+  updateSheetBadge();
+  return ok;
+}
+// ส่งรายการค้าง (ซิงก์ไม่สำเร็จ/แก้ไขขณะออฟไลน์) ทีละชุด; all=true คือส่งทุกรายการ
+// มี mutex กันการส่งซ้อนกัน (เช่น กลับมาออนไลน์ + สลับแอป + กดบันทึก พร้อมกัน)
+async function syncPending(all = false) {
+  if (syncing) { await syncing; if (!all && !pendingCount()) return { ok: 0, fail: 0 }; }
+  syncing = syncPendingInner(all);
+  try { return await syncing; } finally { syncing = null; }
+}
+async function syncPendingInner(all) {
+  let ok = 0, fail = 0;
+  for (const id of [...pendingDeletes]) {
+    if (await sheetPost({ action: 'delete', id })) { pendingDeletes = pendingDeletes.filter(x => x !== id); ok++; } else fail++;
+  }
+  writeJson(DELQ_KEY, pendingDeletes);
+  // เรียงตามเวลาเกิดเหตุการณ์ก่อนส่ง เพื่อให้แถวใหม่ในชีตเรียงเหมือนสมุดบันทึก
+  const todo = entries.filter(e => all || e.sync !== 'ok').sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+  for (let i = 0; i < todo.length; i += BULK_SIZE) {
+    const chunk = todo.slice(i, i + BULK_SIZE);
+    const sent = await sheetPost({ action: 'bulk', entries: chunk.map(toSheetPayload) });
+    chunk.forEach(e => { e.sync = sent ? 'ok' : 'pending'; });
+    sent ? ok += chunk.length : fail += chunk.length;
+  }
+  saveEntries(); render();
+  return { ok, fail };
+}
+async function checkBackend() {
+  try {
+    const t0 = Date.now(), j = await fetchJson(GAS_URL + '?ping=1', 15000), t1 = Date.now();
+    backendVer = j && j.version ? verNum(j.version) : 0;
+    backendInfo = { ...j, rtt: t1 - t0, checkedAt: t1 };
+    // นาฬิกาเครื่องเพี้ยน (เทียบเวลาเซิร์ฟเวอร์ Google) → วัน/เวลาที่บันทึกจะผิด จึงต้องเตือน
+    if (j && j.now) { const skew = Math.abs((t0 + t1) / 2 - new Date(j.now).getTime()); backendInfo.skewMin = Math.round(skew / 60000); }
+    notifyBackendIssues();
+  } catch (e) { backendVer = -1; backendInfo = { error: e.code || 'NETWORK', errorText: netErrorText(e) }; } // -1 = เช็กไม่ได้
+  return backendVer;
+}
+// แจ้งข้อผิดพลาดฝั่ง Code.gs ที่เกิดขึ้นใหม่ (POST แบบ no-cors อ่านผลไม่ได้ จึงต้องอ่านผ่าน ping)
+function notifyBackendIssues() {
+  const b = backendInfo || {};
+  if (b.sheetOk === false) toast(`Google Sheets มีปัญหา: ${b.sheetMsg}`, 'error');
+  if (b.lastError && b.lastError.at && b.lastError.at !== readJson(ERRSEEN_KEY, '')) {
+    writeJson(ERRSEEN_KEY, b.lastError.at);
+    if (Date.now() - new Date(b.lastError.at).getTime() < 3 * 86400000) toast(`Code.gs แจ้งข้อผิดพลาดล่าสุด (${sheetDate(new Date(b.lastError.at))} ${sheetTime(new Date(b.lastError.at))}): ${b.lastError.message}`, 'error');
+  }
+  if (b.skewMin >= 5) toast(`นาฬิกาของอุปกรณ์นี้คลาดเคลื่อนประมาณ ${b.skewMin} นาที กรุณาตั้งเวลาอัตโนมัติ เพื่อให้วัน-เวลาที่บันทึกถูกต้อง`, 'error');
+}
+/**
+ * ดึงข้อมูลทั้งหมดจากชีตมารวมกับในเครื่อง (ต้องใช้ Code.gs v6)
+ * กติกาการรวม — ออกแบบให้ "ไม่มีข้อมูลหาย":
+ *  • มีในชีต + ในเครื่องยังรอซิงก์ → ใช้ของในเครื่อง (เป็นการแก้ไขล่าสุดที่ยังส่งไม่ถึง)
+ *  • มีในชีต + ในเครื่องซิงก์แล้ว/ไม่มี → ใช้ของในชีต (รวมกรณีแก้ไขในชีตโดยตรง หรือบันทึกจากเครื่องอื่น)
+ *  • ไม่มีในชีต + อยู่ในรายการ "ลบแล้ว" → ลบออกจากเครื่อง
+ *  • ไม่มีในชีต + ไม่เคยถูกลบ → ส่งขึ้นชีตใหม่ (กรณีที่เคยส่งแต่ Code.gs เขียนไม่สำเร็จ ซึ่ง no-cors ตรวจไม่ได้)
+ */
+async function pullFromSheet({ silent = false } = {}) {
+  if (pulling) return pulling;
+  pulling = (async () => {
+    try {
+      const j = await fetchJson(GAS_URL + '?action=list' + (settings.token ? '&token=' + encodeURIComponent(settings.token) : ''), 30000);
+      if (!j || !j.ok || !Array.isArray(j.rows)) {
+        lastPullError = j && j.error ? j.error : 'Code.gs ไม่รองรับการดึงข้อมูล';
+        if (!silent) toast(j && j.error ? `ดึงข้อมูลไม่สำเร็จ: ${j.error}` : 'Code.gs บน Google ยังไม่ใช่ v6 จึงดึงข้อมูลกลับไม่ได้ กรุณาอัปเดต Code_Daily_Log_v7.gs', 'error');
+        return { ok: false };
+      }
+      const deleted = new Set((j.deleted || []).map(String));
+      const server = new Map(), badIds = new Set(), badWhy = [];
+      j.rows.forEach(r => {
+        const e = rowToEntry(r);
+        if (!e) return;
+        if (e.bad) { badIds.add(e.id); badWhy.push(`แถว ${r.row}: ${e.why}`); return; }
+        server.set(e.id, e);
+      });
+      const local = new Map(entries.map(e => [e.id, e]));
+      const merged = [];
+      let added = 0, updated = 0, removed = 0, reupload = 0;
+      server.forEach((se, id) => {
+        if (pendingDeletes.includes(id)) return; // ลบในเครื่องแล้ว รอส่งคำสั่งลบ
+        const le = local.get(id);
+        if (le && le.sync !== 'ok') { merged.push(le); return; }
+        if (!le) added++;
+        else if (['datetime', 'floor', 'title', 'content', 'reporter', 'note'].some(k => (le[k] || '') !== (se[k] || ''))) updated++;
+        merged.push({ ...se, createdAt: le ? le.createdAt : '', updatedAt: le ? le.updatedAt : '', sync: 'ok' });
+      });
+      local.forEach((le, id) => {
+        if (server.has(id)) return;
+        if (badIds.has(id)) { merged.push(le); return; } // แถวในชีตรูปแบบผิด: คงข้อมูลในเครื่องไว้ ไม่ส่งทับ (ให้ผู้ใช้แก้ในชีต)
+        if (deleted.has(id)) { removed++; removedIds.add(id); return; }
+        if (le.sync === 'ok') { le.sync = 'pending'; reupload++; }
+        merged.push(le);
+      });
+      entries = merged;
+      lastPull = Date.now(); writeJson(PULL_KEY, lastPull); lastPullError = '';
+      writeJson(STORAGE_KEY, entries) || saveEntries(); // แทนที่ทั้งชุด (ไม่รวมกับของเก่าใน storage ที่ถูกลบไปแล้ว)
+      render();
+      if (badIds.size) toast(`พบ ${badIds.size} แถวในชีตที่วันที่/เวลารูปแบบไม่ถูกต้อง (${badWhy.slice(0, 3).join(', ')}${badWhy.length > 3 ? ' ...' : ''}) กรุณาแก้ไขในชีต`, 'error');
+      if (j.duplicates) toast(`พบรหัสบันทึกซ้ำในชีต ${j.duplicates} แถว (อาจเกิดจากคัดลอกแถว) ระบบใช้แถวแรก และจะลบแถวซ้ำเมื่อมีการแก้ไขรายการนั้น`, 'info');
+      if (!$('reportModal').classList.contains('hidden')) renderReportPreview(); // ข้อมูลเปลี่ยนระหว่างดูตัวอย่าง → อัปเดตตัวอย่าง
+      if (reupload) await syncPending(); // ส่งรายการที่ยังไม่อยู่ในชีตขึ้นไปใหม่ทันที
+      if (!silent || added || updated || removed) {
+        toast(`ดึงข้อมูลจากชีตสำเร็จ · ใหม่ ${added} · อัปเดต ${updated} · ลบ ${removed}${reupload ? ` · ส่งขึ้นใหม่ ${reupload}` : ''}`, 'success');
+      }
+      return { ok: true, added, updated, removed, reupload, skipped: j.skipped || 0 };
+    } catch (e) {
+      lastPullError = netErrorText(e);
+      if (!silent) toast(`ดึงข้อมูลจากชีตไม่สำเร็จ: ${lastPullError}`, 'error');
+      return { ok: false };
+    } finally { pulling = null; updatePullInfo(); }
+  })();
+  return pulling;
+}
+function pendingCount() { return entries.filter(e => e.sync !== 'ok').length + pendingDeletes.length; }
+function updateSheetBadge() {
+  const n = pendingCount();
+  $('sheetStatusText').textContent = n ? `รอซิงก์ ${n}` : 'ซิงก์แล้ว';
+  const s = $('syncSummary');
+  if (s) s.textContent = `สถานะ: รอซิงก์ ${n.toLocaleString('th-TH')} รายการ · ดึงข้อมูลล่าสุด ${lastPull ? `${sheetDate(new Date(lastPull))} ${sheetTime(new Date(lastPull))}` : '— ยังไม่เคย'}`;
+}
+function updatePullInfo() {
+  $('pullInfo').textContent = pulling ? '⏳ กำลังดึงข้อมูลจาก Google Sheets...' :
+    (lastPull ? `ข้อมูลจาก Google Sheets อัปเดตล่าสุด ${sheetDate(new Date(lastPull))} ${sheetTime(new Date(lastPull))}` : 'ยังไม่เคยดึงข้อมูลจาก Google Sheets (แสดงเฉพาะที่บันทึกในเครื่องนี้)')
+    + (lastPullError ? ` · ⚠️ ครั้งล่าสุดไม่สำเร็จ: ${lastPullError}` : '');
+  updateSheetBadge();
+}
+
+/* ---------- 6) Filter / Sort ---------- */
+function inRange(d) {
+  if (!filterRange) return true;
+  const today = startOfDay(new Date());
+  if (filterRange === 'today') return sameDay(d, today);
+  if (filterRange === 'yesterday') return sameDay(d, addDays(today, -1));
+  if (filterRange === 'week') { const s = startOfWeek(today); return d >= s && d < addDays(s, 7); }
+  if (filterRange === 'month') return monthKey(d) === monthKey(today);
+  return true;
+}
+// ตัวกรองทั้งหมดยกเว้นหัวข้อ — ใช้คำนวณชิปสรุปตามหัวข้อ (ให้ตัวเลขบนชิปตรงกับผลเมื่อแตะ)
+function baseFiltered() {
+  const q = searchText.trim().toLowerCase();
+  return entries.filter(e => {
+    const d = new Date(e.datetime);
+    return inRange(d)
+      && (!filterMonth || monthKey(d) === filterMonth)
+      && (!filterReporter || e.reporter === filterReporter)
+      && (!filterFloor || (e.floor || '-') === filterFloor)
+      && (!q || [e.title, e.content, e.reporter, e.note, floorLabel(e.floor)].some(v => (v || '').toLowerCase().includes(q)));
+  });
+}
+function getFiltered() {
+  return baseFiltered().filter(e => !filterTopic || topicOf(e.title).label === filterTopic)
+    .sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+}
+const uniqSorted = (arr) => [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'));
+// รายชื่อผู้แจ้ง = รายชื่อที่ตั้งไว้ (เรียงตามที่ตั้ง) + ชื่อที่เคยบันทึกแต่ไม่อยู่ในรายชื่อ
+const allReporters = () => { const base = settings.reporters || []; return [...base, ...uniqSorted(entries.map(e => e.reporter)).filter(n => !base.includes(n))]; };
+
+/* ---------- 7) Render ---------- */
+function render() { renderStats(); renderFilters(); renderList(); updateSheetBadge(); }
+
+function countBy(list, keyFn) {
+  const m = {};
+  list.forEach(e => { const k = keyFn(e); m[k] = (m[k] || 0) + 1; });
+  return Object.entries(m).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'th'));
+}
+function countStats() {
+  const now = new Date(), mk = monthKey(now);
+  const monthList = entries.filter(e => monthKey(new Date(e.datetime)) === mk);
+  const top = countBy(monthList, e => topicOf(e.title).label)[0] || null;
+  return { total: entries.length, today: entries.filter(e => sameDay(new Date(e.datetime), now)).length, month: monthList.length, top };
+}
+function renderStats() {
+  const s = countStats();
+  $('statTotal').textContent = s.total.toLocaleString('th-TH');
+  $('statToday').textContent = s.today.toLocaleString('th-TH');
+  $('statMonth').textContent = s.month.toLocaleString('th-TH');
+  $('statTopCat').textContent = s.top ? `${topicOf(s.top[0]).icon} ${s.top[0]}` : '—';
+  $('statTopCount').textContent = s.top ? `${s.top[1].toLocaleString('th-TH')} ครั้ง (${Math.round(s.top[1] / s.month * 100)}% ของเดือน)` : 'ยังไม่มีบันทึกเดือนนี้';
+}
+const chipClass = (active) => 'px-3 py-1.5 rounded-full text-sm border transition ' + (active
+  ? 'bg-indigo-600 text-white border-indigo-600 shadow'
+  : 'bg-white/80 dark:bg-slate-900/70 border-slate-200 dark:border-slate-700 hover:border-indigo-400');
+
+function renderFilters() {
+  const opt = (v, t, sel) => `<option value="${esc(v)}" ${sel ? 'selected' : ''}>${esc(t)}</option>`;
+  $('rangeChips').innerHTML = Object.entries(RANGES).map(([k, v]) => `<button data-range="${k}" class="${chipClass(filterRange === k)}">${v}</button>`).join('');
+  const months = [...new Set(entries.map(e => monthKey(new Date(e.datetime))))].sort().reverse();
+  if (filterMonth && !months.includes(filterMonth)) filterMonth = '';
+  $('filterMonth').innerHTML = opt('', '🗓️ ทุกเดือน', !filterMonth) + months.map(m => { const [y, mo] = m.split('-').map(Number); return opt(m, fmtMonth(y, mo - 1), m === filterMonth); }).join('');
+  $('filterTopic').innerHTML = opt('', '🏷️ ทุกหัวข้อ', !filterTopic) + [...TOPICS, OTHER_TOPIC].map(t => opt(t.label, `${t.icon} ${t.label}`, t.label === filterTopic)).join('');
+  $('filterFloor').innerHTML = opt('', '🏢 ทุกชั้น', !filterFloor) + FLOORS.map(f => opt(f, floorLabel(f), f === filterFloor)).join('') + opt('-', 'ไม่ระบุชั้น', filterFloor === '-');
+  const reps = allReporters();
+  if (filterReporter && !reps.includes(filterReporter)) filterReporter = '';
+  $('filterReporter').innerHTML = opt('', '✍️ ผู้แจ้งทุกคน', !filterReporter) + reps.map(a => opt(a, a, a === filterReporter)).join('');
+}
+function renderTopicSummary() {
+  const base = baseFiltered(), counts = Object.fromEntries(countBy(base, e => topicOf(e.title).label));
+  const items = [...TOPICS, OTHER_TOPIC].filter(t => counts[t.label] || filterTopic === t.label);
+  $('topicSummary').innerHTML = !base.length ? '' : items.map(t => {
+    const on = filterTopic === t.label;
+    return `<button data-topic="${esc(t.label)}" class="glass px-3 py-1.5 rounded-full text-xs sm:text-sm border transition flex items-center gap-1.5 ${on ? 'ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-slate-900' : 'hover:-translate-y-0.5'}" style="border-color:${t.color}66">
+      <span>${t.icon}</span>${esc(t.label)}<b class="ml-0.5 px-1.5 rounded-full text-white text-[11px]" style="background:${t.color}">${(counts[t.label] || 0).toLocaleString('th-TH')}</b></button>`;
+  }).join('');
+}
+function syncBadge(e) {
+  return e.sync === 'ok'
+    ? '<span class="text-[11px] whitespace-nowrap text-emerald-600 dark:text-emerald-400" title="อยู่ใน Google Sheets แล้ว">☁️ ซิงก์แล้ว</span>'
+    : '<span class="text-[11px] whitespace-nowrap text-amber-600 dark:text-amber-400" title="ยังไม่ได้ส่งขึ้น Google Sheets">⏳ รอซิงก์</span>';
+}
+function dayBadge(d) {
+  const today = startOfDay(new Date());
+  if (sameDay(d, today)) return '<span class="px-2 py-0.5 rounded-full text-xs bg-sky-500 text-white">วันนี้</span>';
+  if (sameDay(d, addDays(today, -1))) return '<span class="px-2 py-0.5 rounded-full text-xs bg-slate-500 text-white">เมื่อวาน</span>';
+  return '';
+}
+function topicChip(e, big = false) {
+  const t = topicOf(e.title), custom = t === OTHER_TOPIC;
+  return `<span class="inline-flex items-center gap-1 rounded-full font-semibold ${big ? 'px-3 py-1 text-sm' : 'px-2.5 py-0.5 text-xs'}" style="background:${t.color}1a; color:${t.color}; box-shadow: inset 0 0 0 1px ${t.color}40">${t.icon} ${esc(custom ? 'อื่นๆ' : t.label)}</span>`;
+}
+const TH_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+// การ์ดเหตุการณ์ (v9): หัวการ์ด = ไอคอน+หัวข้อ+เวลาเด่น · แถบข้อมูลย่อย (ชั้น/หมายเหตุ) · รายละเอียดตัวใหญ่อ่านง่าย · ท้ายการ์ด = ผู้แจ้ง+ปุ่ม
+// สีของการ์ดผูกกับหัวข้อเหตุการณ์ สีป้ายชั้นผูกกับชั้น — กวาดตาแยกประเภทได้ทันทีโดยไม่ต้องอ่าน
+function renderCard(e) {
+  const t = topicOf(e.title), custom = t === OTHER_TOPIC, open = expanded.has(e.id);
+  const fc = floorColorOf(floorLabel(e.floor));
+  const long = e.content.length > 220 || (e.content.match(/\n/g) || []).length > 3;
+  return `
+    <article data-id="${e.id}" class="card-in group relative flex flex-col overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur border border-slate-200/80 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition cursor-pointer">
+      <div class="h-1.5" style="background:linear-gradient(90deg, ${t.color}, ${t.color}55)"></div>
+      <div class="flex items-start gap-3 px-4 pt-3">
+        <div class="w-12 h-12 shrink-0 rounded-2xl grid place-items-center text-2xl" style="background:${t.color}1c; box-shadow: inset 0 0 0 1px ${t.color}45">${t.icon}</div>
+        <div class="min-w-0 flex-1 pt-0.5">
+          <p class="text-[11px] font-semibold tracking-wide" style="color:${t.color}">${custom ? '📦 อื่นๆ (ระบุเอง)' : 'หัวข้อเหตุการณ์'}</p>
+          <h3 class="font-display font-semibold text-[15.5px] leading-snug break-words text-slate-800 dark:text-slate-100">${esc(e.title || '(ไม่มีหัวข้อ)')}</h3>
+        </div>
+        <div class="shrink-0 text-center rounded-xl px-2.5 py-1.5" style="background:${t.color}14">
+          <div class="font-display font-bold text-xl leading-none tabular-nums" style="color:${t.color}">${fmtClock(e.datetime).replace(':', '.')}</div>
+          <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">น.</div>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5 px-4 mt-2.5">
+        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold text-white" style="background:${fc}">🏢 ${esc(floorLabel(e.floor))}</span>
+        ${e.note ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 border border-amber-200 dark:border-amber-800">📝 ${esc(e.note)}</span>` : ''}
+      </div>
+      <div class="flex-1 px-4 pt-2.5 pb-3">
+        <p class="text-[14.5px] leading-7 text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words ${open ? '' : 'clamp-4'}">${esc(e.content)}</p>
+        ${long ? `<button data-action="toggle" class="mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">${open ? '▲ ย่อข้อความ' : '▼ อ่านต่อ'}</button>` : ''}
+      </div>
+      <div class="flex items-center gap-2 px-4 py-2 border-t border-slate-100 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-900/40 text-xs">
+        <span class="w-7 h-7 shrink-0 rounded-full grid place-items-center text-[11px] font-bold text-white bg-gradient-to-br from-indigo-500 to-purple-600 shadow">${esc(initials(e.reporter))}</span>
+        <span class="min-w-0"><span class="block text-[10px] text-slate-400 leading-tight">ผู้แจ้ง</span><span class="block font-medium text-slate-700 dark:text-slate-200 truncate">${esc(e.reporter || '-')}</span></span>
+        <span class="ml-1">${syncBadge(e)}</span>
+        <span class="ml-auto flex gap-1">
+          <button data-action="edit" title="แก้ไข" class="h-8 px-2.5 rounded-lg border border-transparent hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-600 dark:text-slate-300">✏️ <span class="hidden sm:inline">แก้ไข</span></button>
+          <button data-action="delete" title="ลบ" class="h-8 px-2.5 rounded-lg border border-transparent hover:border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-900/30 text-rose-600">🗑️ <span class="hidden sm:inline">ลบ</span></button>
+        </span>
+      </div>
+    </article>`;
+}
+// หัวกลุ่มวัน: ปฏิทินย่อ + วันที่เต็ม + จำนวน + จุดสีหัวข้อของวันนั้น
+function renderDayHeader(g) {
+  const topics = countBy(g.items, e => topicOf(e.title).label);
+  return `
+    <div class="flex flex-wrap items-center gap-3 pt-4 pb-1">
+      <div class="flex items-center gap-3 rounded-2xl glass border border-white/70 dark:border-slate-700 pl-2 pr-4 py-2 shadow-sm">
+        <div class="w-12 h-12 rounded-xl text-white grid place-items-center leading-none bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md">
+          <div class="text-center"><div class="font-display font-bold text-xl">${g.d.getDate()}</div><div class="text-[10px] opacity-90">${TH_MONTHS_SHORT[g.d.getMonth()]}</div></div>
+        </div>
+        <div>
+          <p class="font-display font-semibold text-[15px] leading-tight">${fmtDate(g.d)} ${dayBadge(g.d)}</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2">
+            <b class="text-indigo-600 dark:text-indigo-300">${g.items.length.toLocaleString('th-TH')} เหตุการณ์</b>
+            ${topics.map(([k, n]) => `<span title="${esc(k)}">${topicOf(k).icon}${n}</span>`).join('')}
+          </p>
+        </div>
+      </div>
+      <div class="flex-1 h-px bg-gradient-to-r from-indigo-300/70 to-transparent dark:from-indigo-700/70"></div>
+    </div>`;
+}
+function renderList() {
+  renderTopicSummary();
+  const list = getFiltered();
+  const hasFilter = searchText.trim() || filterRange || filterMonth || filterReporter || filterFloor || filterTopic;
+  const days = new Set(list.map(e => dayKey(new Date(e.datetime)))).size;
+  $('resultInfo').textContent = entries.length ? `แสดง ${list.length.toLocaleString('th-TH')} เหตุการณ์ ใน ${days.toLocaleString('th-TH')} วัน (ทั้งหมด ${entries.length.toLocaleString('th-TH')})` : '';
+  $('emptyState').classList.toggle('hidden', list.length > 0);
+  if (!list.length) {
+    const filtered = hasFilter && entries.length;
+    $('emptyTitle').textContent = filtered ? 'ไม่พบเหตุการณ์ที่ตรงเงื่อนไข' : 'ยังไม่มีบันทึกเหตุการณ์';
+    $('emptyDesc').textContent = filtered ? 'ลองเปลี่ยนช่วงวันที่ คำค้นหา หรือล้างตัวกรอง' : 'กดปุ่ม "บันทึกเหตุการณ์" หรือ "ดึงข้อมูลล่าสุด" จาก Google Sheets';
+  }
+  // จัดกลุ่มตามวัน (รายการเรียงใหม่→เก่าแล้ว จึงไล่ต่อกันได้เลย)
+  const groups = [];
+  list.forEach(e => {
+    const d = new Date(e.datetime), k = dayKey(d);
+    if (!groups.length || groups[groups.length - 1].k !== k) groups.push({ k, d, items: [] });
+    groups[groups.length - 1].items.push(e);
+  });
+  // จอกว้าง (≥1280px) แสดงการ์ด 2 คอลัมน์ — ใช้พื้นที่ที่ขยายเต็มขึ้น อ่านได้มากขึ้นโดยไม่ต้องเลื่อน
+  $('entryList').innerHTML = groups.map(g => `${renderDayHeader(g)}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">${g.items.map(renderCard).join('')}</div>`).join('');
+}
+
+/* ---------- 8) Modal ---------- */
+const MODALS = ['entryModal', 'detailModal', 'reportModal', 'confirmModal', 'sheetModal', 'iosModal'];
+function openModal(id) {
+  const el = $(id);
+  el.classList.remove('hidden'); el.classList.add('flex');
+  requestAnimationFrame(() => {
+    el.querySelector('.modal-backdrop').classList.remove('opacity-0');
+    el.querySelector('.modal-panel').classList.remove('opacity-0', 'translate-y-4', 'scale-95');
+  });
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  const el = $(id);
+  el.querySelector('.modal-backdrop').classList.add('opacity-0');
+  el.querySelector('.modal-panel').classList.add('opacity-0', 'translate-y-4', 'scale-95');
+  setTimeout(() => {
+    el.classList.add('hidden'); el.classList.remove('flex');
+    if (MODALS.every(m => $(m).classList.contains('hidden'))) document.body.style.overflow = '';
+  }, 250);
+}
+
+// หน้าต่างรายละเอียดเหตุการณ์ — จัดข้อมูลตามหัวคอลัมน์ในชีต ให้อ่าน/ตรวจทานได้ครบในหน้าเดียว
+function openDetail(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  detailId = id;
+  const t = topicOf(e.title), d = new Date(e.datetime), custom = t === OTHER_TOPIC;
+  const tile = (icon, label, val) => `<div class="rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700 px-3 py-2">
+      <p class="text-[11px] text-slate-500 dark:text-slate-400">${icon} ${label}</p><p class="font-semibold text-sm mt-0.5 break-words">${val}</p></div>`;
+  $('detailBody').innerHTML = `
+    <div class="relative px-5 pt-5 pb-6 text-white" style="background:linear-gradient(135deg, ${t.color}, ${t.color}bb 60%, #312e81)">
+      <button data-close="detailModal" class="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25">✕</button>
+      <div class="flex items-center gap-3">
+        <div class="w-14 h-14 rounded-2xl bg-white/20 grid place-items-center text-3xl shadow-inner">${t.icon}</div>
+        <div class="min-w-0">
+          <p class="text-xs opacity-90">หัวข้อเหตุการณ์${custom ? ' · อื่นๆ' : ''}</p>
+          <h3 class="font-display font-bold text-xl leading-snug break-words">${esc(e.title)}</h3>
+        </div>
+      </div>
+      <p class="mt-3 text-sm opacity-95">📅 ${fmtDate(d)} · ⏰ ${sheetTime(d)}</p>
+    </div>
+    <div class="p-5 space-y-4 -mt-3 bg-white dark:bg-slate-800 rounded-t-3xl relative">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        ${tile('🗓️', 'ว/ด/ป', sheetDate(d))}${tile('⏰', 'เวลา', sheetTime(d))}${tile('📆', 'วัน', fmtWeekday(d))}
+        ${tile('🗂️', 'เดือน', sheetMonth(d))}${tile('🏢', 'ชั้น', esc(floorLabel(e.floor)))}${tile('✍️', 'ผู้แจ้ง', esc(e.reporter || '-'))}
+      </div>
+      <div>
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">เหตุการณ์ประจำวัน (รายละเอียด)</p>
+        <div class="rounded-2xl border-l-4 bg-slate-50 dark:bg-slate-900/60 px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap break-words" style="border-color:${t.color}">${esc(e.content)}</div>
+      </div>
+      ${e.note ? `<div><p class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">หมายเหตุ</p>
+        <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">📝 ${esc(e.note)}</div></div>` : ''}
+      <p class="text-[11px] text-slate-400 flex flex-wrap gap-x-3">${syncBadge(e)}${e.updatedAt ? `<span>แก้ไขล่าสุด ${sheetDate(new Date(e.updatedAt))} ${sheetTime(new Date(e.updatedAt))}</span>` : ''}<span>รหัส ${esc(e.id)}</span></p>
+      <div class="flex gap-2 pt-1">
+        <button id="dtEdit" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium">✏️ แก้ไข</button>
+        <button id="dtDelete" class="px-4 py-2.5 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30">🗑️ ลบ</button>
+        <button data-close="detailModal" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">ปิด</button>
+      </div>
+    </div>`;
+  $('dtEdit').onclick = () => { closeModal('detailModal'); setTimeout(() => openForm(id), 260); };
+  $('dtDelete').onclick = () => { closeModal('detailModal'); setTimeout(() => askDelete(id), 260); };
+  openModal('detailModal');
+}
+
+/* ---------- 9) ฟอร์มเพิ่ม/แก้ไข ---------- */
+function openForm(id = null) {
+  editingId = id;
+  const e = id ? entries.find(x => x.id === id) : null;
+  $('modalTitle').textContent = e ? 'แก้ไขบันทึกเหตุการณ์' : 'บันทึกเหตุการณ์ใหม่';
+  $('fDate').value = toLocalInput(e ? new Date(e.datetime) : new Date());
+  $('fFloor').innerHTML = `<option value="">— ไม่ระบุ —</option>` + FLOORS.map(f => `<option value="${esc(f)}">${esc(floorLabel(f))}</option>`).join('');
+  $('fFloor').value = e ? (e.floor || '') : '';
+  // หัวข้อเป็นดรอปดาวน์ประเภทเหตุการณ์ — ถ้าบันทึกเดิมเป็นหัวข้อที่พิมพ์เอง ให้เลือก "อื่นๆ" และแสดงข้อความเดิม
+  $('fTopic').innerHTML = `<option value="">— เลือกหัวข้อเหตุการณ์ —</option>` + TOPICS.map(t => `<option value="${esc(t.label)}">${t.icon} ${esc(t.label)}</option>`).join('') + `<option value="${OTHER_KEY}">📦 อื่นๆ (ระบุหัวข้อเอง)</option>`;
+  const isKnown = e && TOPICS.some(t => t.label === e.title);
+  $('fTopic').value = !e ? '' : (isKnown ? e.title : OTHER_KEY);
+  $('fTitleOther').value = e && !isKnown ? e.title : '';
+  toggleOtherTitle();
+  $('fContent').value = e ? e.content : '';
+  // ผู้แจ้งเป็นดรอปดาวน์ — บันทึกเก่าที่ชื่อไม่อยู่ในรายชื่อ ยังแสดง/เลือกได้ (ไม่ทำให้ชื่อเดิมหาย)
+  const cur = e ? e.reporter : (settings.reporter || '');
+  const names = [...settings.reporters];
+  if (cur && !names.includes(cur)) names.push(cur);
+  $('fReporter').innerHTML = `<option value="">— เลือกผู้แจ้ง —</option>` + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  $('fReporter').value = cur;
+  $('fNote').value = e ? e.note : '';
+  $('formError').classList.add('hidden');
+  renderAutoFields();
+  openModal('entryModal');
+}
+function toggleOtherTitle() {
+  const other = $('fTopic').value === OTHER_KEY;
+  $('fTitleOther').classList.toggle('hidden', !other);
+  if (other) setTimeout(() => $('fTitleOther').focus(), 50);
+}
+// แสดง วัน / เดือน ที่จะลงชีต ให้ผู้บันทึกเห็นก่อนกดบันทึก
+function renderAutoFields() {
+  const d = new Date($('fDate').value);
+  $('fAuto').textContent = isNaN(d) ? '' : `📌 ว/ด/ป ${sheetDate(d)} · เวลา ${sheetTime(d)} · ${fmtWeekday(d)} · เดือน${sheetMonth(d)}`;
+}
+async function submitForm() {
+  const topic = $('fTopic').value;
+  const title = topic === OTHER_KEY ? cleanName($('fTitleOther').value) : topic;
+  const content = $('fContent').value.trim(), reporter = $('fReporter').value;
+  const start = new Date($('fDate').value);
+  const err = $('formError');
+  const fail = (msg) => { err.textContent = msg; err.classList.remove('hidden'); err.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+
+  if (isNaN(start.getTime()) || !title || !content || !reporter) return fail(topic === OTHER_KEY && !title ? 'กรุณาระบุหัวข้อเหตุการณ์ (เลือก "อื่นๆ" แล้วต้องพิมพ์หัวข้อ)' : 'กรุณากรอกวันที่-เวลา หัวข้อเหตุการณ์ รายละเอียด และเลือกผู้แจ้งให้ครบถ้วน');
+  if (start > new Date(Date.now() + 5 * 60000)) return fail('วันที่-เวลาเป็นเวลาในอนาคต กรุณาตรวจสอบอีกครั้ง');
+  if (start.getFullYear() < 2020) return fail('ปีของวันที่ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+  if (content.length > MAX_CONTENT) return fail(`รายละเอียดยาวเกิน ${MAX_CONTENT.toLocaleString('th-TH')} ตัวอักษร (ปัจจุบัน ${content.length.toLocaleString('th-TH')}) กรุณาสรุปให้กระชับ`);
+  if (title.length > 120) return fail('หัวข้อเหตุการณ์ยาวเกิน 120 ตัวอักษร');
+  // เตือนบันทึกซ้ำ (เวลา+หัวข้อ+รายละเอียดเดียวกัน) — มักเกิดจากกดบันทึกซ้ำหรือคนละเครื่องบันทึกเรื่องเดียวกัน
+  const dup = entries.find(x => x.id !== editingId && x.datetime === start.toISOString() && x.title === title && x.content === content);
+  if (dup) return fail('มีบันทึกเหตุการณ์นี้แล้ว (วันเวลา หัวข้อ และรายละเอียดซ้ำกัน) กรุณาตรวจสอบก่อนบันทึก');
+  err.classList.add('hidden');
+
+  const now = new Date().toISOString();
+  const data = { datetime: start.toISOString(), floor: $('fFloor').value, title, content, reporter, note: $('fNote').value.trim() };
+  const wasEditing = !!editingId;
+  let entry;
+  if (editingId) {
+    entry = entries.find(x => x.id === editingId);
+    if (!entry) return fail('ไม่พบบันทึกนี้แล้ว (อาจถูกลบจากเครื่องอื่น) กรุณาปิดแล้วดึงข้อมูลล่าสุด');
+    Object.assign(entry, data, { updatedAt: now, sync: 'pending' });
+  } else { entry = { id: uid(), ...data, createdAt: now, updatedAt: now, sync: 'pending' }; entries.push(entry); }
+
+  // จำชื่อผู้แจ้งประจำเครื่องไว้ใช้ครั้งถัดไป
+  if (reporter !== settings.reporter) { settings.reporter = reporter; writeJson(SETTINGS_KEY, settings); }
+
+  saveEntries(); // ถ้าเก็บในเครื่องไม่ได้ ยังส่งขึ้นชีตต่อ (ข้อมูลไม่หาย) — saveEntries แจ้งเตือนเอง
+  closeModal('entryModal');
+  render();
+
+  const ok = await syncEntry(entry);
+  if (ok) toast(wasEditing ? 'แก้ไขบันทึกสำเร็จ และอัปเดต Google Sheets แล้ว' : 'บันทึกเหตุการณ์สำเร็จ และส่งขึ้น Google Sheets แล้ว');
+  else toast('บันทึกในเครื่องแล้ว แต่ส่งขึ้น Google Sheets ไม่สำเร็จ ระบบจะลองใหม่เมื่อออนไลน์', 'error');
+}
+
+/* ---------- 10) ลบบันทึก ---------- */
+function askDelete(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  pendingDeleteId = id;
+  $('confirmText').textContent = `"${e.title}" (${fmtDate(e.datetime)} ${sheetTime(new Date(e.datetime))})`;
+  openModal('confirmModal');
+}
+async function doDelete() {
+  const id = pendingDeleteId;
+  if (!id) return;
+  entries = entries.filter(x => x.id !== id);
+  removedIds.add(id);
+  expanded.delete(id); pendingDeleteId = null;
+  saveEntries(); closeModal('confirmModal'); render();
+  const ok = await syncDelete(id);
+  toast(ok ? 'ลบบันทึกและแถวในชีตเรียบร้อยแล้ว' : 'ลบในเครื่องแล้ว แต่ลบในชีตไม่สำเร็จ ระบบจะลองใหม่เมื่อออนไลน์', ok ? 'success' : 'error');
+}
+
+/* ---------- 11) ตั้งค่า ---------- */
+function openSettings() {
+  $('setUrl').value = GAS_URL; $('setToken').value = settings.token || ''; $('setReporter').value = settings.reporter || '';
+  $('setReporters').value = (settings.reporters || []).join('\n');
+  $('reporterList').innerHTML = allReporters().map(a => `<option value="${esc(a)}"></option>`).join('');
+  $('setIdle').value = String(settings.idleMin);
+  updateSheetBadge(); openModal('sheetModal');
+}
+function saveSettings() {
+  // ตัดช่องว่าง/ชื่อซ้ำออก แต่คงลำดับที่ผู้ใช้เรียงไว้
+  const reporters = [...new Set($('setReporters').value.split(/\r?\n/).map(cleanName).filter(Boolean))];
+  if (!reporters.length) { toast('กรุณาใส่รายชื่อผู้แจ้งอย่างน้อย 1 ชื่อ', 'error'); return false; }
+  settings = { url: GAS_URL, token: $('setToken').value.trim(), reporter: cleanName($('setReporter').value), reporters, reportersVer: REPORTERS_VER, idleMin: Number($('setIdle').value) };
+  writeJson(SETTINGS_KEY, settings);
+  render(); markActive();
+  const idleTxt = settings.idleMin ? `พักหน้าจอหลัง ${settings.idleMin} นาที` : 'ปิดการพักหน้าจอ';
+  toast(`บันทึกการตั้งค่าสำเร็จ (ผู้แจ้ง ${reporters.length.toLocaleString('th-TH')} ท่าน · ${idleTxt})`);
+  return true;
+}
+function resetReporters() {
+  $('setReporters').value = DEFAULT_REPORTERS.join('\n');
+  toast(`คืนค่ารายชื่อตั้งต้น ${DEFAULT_REPORTERS.length} ท่านแล้ว กด "บันทึกการตั้งค่า" เพื่อยืนยัน`, 'info');
+}
+async function testConnection() {
+  const btn = $('btnTest'); setLoading(btn, true, 'กำลังทดสอบ...');
+  try {
+    const v = await checkBackend();
+    if (v < 0) toast(`ทดสอบไม่ผ่าน: ${backendInfo && backendInfo.errorText || 'เชื่อมต่อไม่ได้'}`, 'error');
+    else if (backendInfo && backendInfo.sheetOk === false) toast(`เชื่อมต่อได้ แต่ชีตมีปัญหา: ${backendInfo.sheetMsg}`, 'error');
+    else if (v >= BACKEND_MIN_PULL) toast(`เชื่อมต่อสำเร็จ (Code.gs v${v}) — บันทึกและดึงข้อมูลได้ครบ`);
+    else if (v >= BACKEND_MIN_WRITE) toast(`เชื่อมต่อได้ (Code.gs v${v}) บันทึกได้ แต่ดึงข้อมูลกลับไม่ได้ กรุณาอัปเดตเป็น Code_Daily_Log_v7.gs`, 'error');
+    else toast('เชื่อมต่อได้ แต่ Code.gs เป็นเวอร์ชันเก่า กรุณาวาง Code_Daily_Log_v7.gs แล้ว Deploy → Manage deployments → Edit → New version', 'error');
+  } finally { setLoading(btn, false); }
+}
+async function syncAllNow() {
+  if (!entries.length && !pendingDeletes.length) return toast('ยังไม่มีบันทึกให้ซิงก์', 'info');
+  const btn = $('btnSyncAll'); setLoading(btn, true, 'กำลังซิงก์...');
+  const r = await syncPending(true);
+  setLoading(btn, false); updateSheetBadge();
+  toast(r.fail ? `ส่งสำเร็จ ${r.ok} รายการ ไม่สำเร็จ ${r.fail} รายการ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่` : `ซิงก์ขึ้น Google Sheets สำเร็จ ${r.ok.toLocaleString('th-TH')} รายการ`, r.fail ? 'error' : 'success');
+}
+
+/* ---------- 12) Export / Import ---------- */
+function download(filename, blob) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function stamp() {
+  const d = new Date();
+  return `${d.getFullYear() + 543}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+function exportJson() {
+  if (!entries.length) return toast('ยังไม่มีบันทึกให้สำรองข้อมูล', 'info');
+  const clean = entries.map(({ sync, ...rest }) => rest); // ไม่เก็บสถานะซิงก์ลงไฟล์สำรอง
+  download(`SBK_Daily_Log_backup_${stamp()}.json`, new Blob([JSON.stringify({ app: 'work-journal', version: 7, exportedAt: new Date().toISOString(), entries: clean }, null, 2)], { type: 'application/json' }));
+  toast(`สำรองข้อมูล ${entries.length.toLocaleString('th-TH')} รายการสำเร็จ`);
+}
+function importJson(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const incoming = Array.isArray(data) ? data : data.entries; // รองรับไฟล์สำรองจาก v1–v6 ด้วย
+      if (!Array.isArray(incoming)) throw new Error('format');
+      const valid = incoming.filter(isValidEntry).map(e => ({ ...normalizeEntry(e), sync: 'pending' }));
+      if (!valid.length) throw new Error('empty');
+      const ids = new Set(entries.map(e => e.id));
+      const fresh = valid.filter(e => !ids.has(e.id));
+      entries = entries.concat(fresh);
+      if (saveEntries()) toast(`นำเข้าสำเร็จ ${fresh.length.toLocaleString('th-TH')} รายการ (ข้ามที่ซ้ำ ${(valid.length - fresh.length).toLocaleString('th-TH')} รายการ)`);
+      render();
+    } catch (err) { toast('ไฟล์ไม่ถูกต้อง กรุณาเลือกไฟล์ JSON ที่สำรองจากแอปนี้', 'error'); }
+  };
+  reader.onerror = () => toast('อ่านไฟล์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+  reader.readAsText(file);
+  $('fileImport').value = '';
+}
+
+/* ---------- 12.1) รายงานสรุป A4 แนวนอน (รายวัน / รายสัปดาห์ / รายเดือน) ---------- */
+// ขั้นตอน: 1) เลือกช่วงรายงาน → 2) ดูตัวอย่าง + ระบบตรวจความครบถ้วน → 3) ติ๊กยืนยันว่าตรวจแล้ว → 4) ออกใบรายงาน (PDF / JPEG / พิมพ์)
+// ทำไมแบ่งหน้าเอง: html2canvas วาดภาพยาวมากๆ ไม่ได้ (เพดานขนาด canvas ของเบราว์เซอร์) จึงวัดความสูงจริงแล้วตัดเป็นหน้า A4 ละ 1 ภาพ
+const RPT_W = 1123, RPT_H = 794; // A4 แนวนอนที่ 96 dpi
+const RPT_TYPES = { daily: 'รายวัน', weekly: 'รายสัปดาห์', monthly: 'รายเดือน' };
+let rptType = 'daily', rptModel = null, rptVerified = false;
+const TIME_BANDS = [['00.00–05.59 น.', 0, 6], ['06.00–11.59 น.', 6, 12], ['12.00–17.59 น.', 12, 18], ['18.00–23.59 น.', 18, 24]];
+// ชุดสีของใบรายงาน (ใช้ inline style ทั้งหมด เพื่อให้ html2canvas วาดได้ตรงกับที่เห็น)
+const C = { ink: '#0f172a', navy: '#1e1b4b', indigo: '#4338ca', violet: '#7c3aed', pink: '#db2777', line: '#cbd5e1', soft: '#f8fafc', muted: '#64748b' };
+
+function periodOf(type, anchor) {
+  if (type === 'daily') { const s = startOfDay(anchor); return { start: s, end: addDays(s, 1) }; }
+  if (type === 'weekly') { const s = startOfWeek(anchor); return { start: s, end: addDays(s, 7) }; }
+  const s = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+  return { start: s, end: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1) };
+}
+function prevPeriod(type, p) {
+  if (type === 'monthly') return periodOf('monthly', new Date(p.start.getFullYear(), p.start.getMonth() - 1, 1));
+  return periodOf(type, addDays(p.start, type === 'daily' ? -1 : -7));
+}
+function periodText(type, p) {
+  const last = addDays(p.end, -1);
+  if (type === 'daily') return `ประจำ${fmtDate(p.start)}`;
+  if (type === 'monthly') return `ประจำเดือน${fmtMonth(p.start.getFullYear(), p.start.getMonth())}`;
+  const sameM = p.start.getMonth() === last.getMonth(), sameY = p.start.getFullYear() === last.getFullYear();
+  return `ระหว่าง${TH_DAYS[p.start.getDay()]}ที่ ${p.start.getDate()}${sameM && sameY ? '' : ' ' + TH_MONTHS[p.start.getMonth()]}${sameY ? '' : ' ' + (p.start.getFullYear() + 543)} – ${TH_DAYS[last.getDay()]}ที่ ${fmtDateNoDay(last)}`;
+}
+const inP = (e, p) => { const d = new Date(e.datetime); return d >= p.start && d < p.end; };
+const prevLabelOf = (type) => type === 'daily' ? 'วันก่อนหน้า' : type === 'weekly' ? 'สัปดาห์ก่อนหน้า' : 'เดือนก่อนหน้า';
+
+// ข้อมูลสรุปคำนวณจาก entries ทั้งหมด (ไม่ขึ้นกับตัวกรองบนแดชบอร์ด) เพื่อให้รายงานครบถ้วนเสมอ
+function buildReportModel(type, anchor) {
+  const p = periodOf(type, anchor), pp = prevPeriod(type, p);
+  const list = entries.filter(e => inP(e, p)).sort((a, b) => new Date(a.datetime) - new Date(b.datetime) || a.id.localeCompare(b.id));
+  const prevCount = entries.filter(e => inP(e, pp)).length;
+  const today = startOfDay(new Date());
+  // จำนวนวันที่ใช้หาค่าเฉลี่ย: นับเฉพาะวันที่ผ่านมาแล้ว (ช่วงที่ยังไม่จบ จะไม่เฉลี่ยด้วยวันในอนาคต)
+  const totalDays = Math.round((p.end - p.start) / 86400000);
+  const elapsed = Math.max(0, Math.min(totalDays, Math.round((Math.min(p.end, addDays(today, 1)) - p.start) / 86400000)));
+  const perDay = [];
+  for (let i = 0; i < totalDays; i++) { const d = addDays(p.start, i); perDay.push({ d, n: list.filter(e => sameDay(new Date(e.datetime), d)).length }); }
+  const peakDay = perDay.reduce((m, x) => x.n > (m ? m.n : 0) ? x : m, null);
+  const bands = TIME_BANDS.map(([label, a, b]) => ({ label, n: list.filter(e => { const h = new Date(e.datetime).getHours(); return h >= a && h < b; }).length }));
+  const no = `DL-${type === 'daily' ? 'D' : type === 'weekly' ? 'W' : 'M'}-${p.start.getFullYear() + 543}${pad(p.start.getMonth() + 1)}${type === 'monthly' ? '' : pad(p.start.getDate())}`;
+  return {
+    type, p, list, prevCount, totalDays, elapsed, perDay, peakDay, bands, no,
+    byTopic: countBy(list, e => topicOf(e.title).label),
+    byFloor: countBy(list, e => floorLabel(e.floor)),
+    byReporter: countBy(list, e => e.reporter || '-'),
+    activeDays: perDay.filter(x => x.n).length,
+    pending: list.filter(e => e.sync !== 'ok').length,
+    future: p.start > today,
+    ongoing: p.start <= today && p.end > today
+  };
+}
+
+// ตรวจความครบถ้วนก่อนออกรายงาน — คืนรายการ {level: ok|warn|err, text}
+function reportChecks(m) {
+  const out = [], total = m.list.length;
+  const add = (level, text) => out.push({ level, text });
+  if (m.future) add('err', 'ช่วงเวลาที่เลือกยังมาไม่ถึง — ไม่ควรออกรายงาน');
+  else if (m.ongoing) add('warn', `${m.type === 'daily' ? 'วันนี้' : m.type === 'weekly' ? 'สัปดาห์นี้' : 'เดือนนี้'}ยังไม่สิ้นสุด — ข้อมูลอาจยังไม่ครบ (รายงานแสดงถึงเวลา ${sheetTime(new Date())})`);
+  if (backendVer !== null && backendVer >= 0 && backendVer < BACKEND_MIN_PULL) add('warn', 'Code.gs ยังไม่ใช่ v6 ขึ้นไป — รายงานมีเฉพาะข้อมูลในเครื่องนี้ (อาจไม่ครบทุกเครื่อง)');
+  else if (!lastPull) add('warn', 'ยังไม่เคยดึงข้อมูลจาก Google Sheets — รายงานอาจไม่รวมเหตุการณ์จากเครื่องอื่น');
+  else if (Date.now() - lastPull > 10 * 60000) add('warn', `ดึงข้อมูลจากชีตครั้งล่าสุดเมื่อ ${sheetDate(new Date(lastPull))} ${sheetTime(new Date(lastPull))} — แนะนำกด "ดึงข้อมูลล่าสุด" ก่อน`);
+  else add('ok', `ข้อมูลอัปเดตจาก Google Sheets แล้ว (${sheetTime(new Date(lastPull))})`);
+  if (lastPullError) add('warn', `ดึงข้อมูลครั้งล่าสุดไม่สำเร็จ: ${lastPullError}`);
+  if (m.pending) add('warn', `มี ${m.pending} รายการในช่วงนี้ที่ยังไม่ได้ซิงก์ขึ้น Google Sheets`);
+  const noFloor = m.list.filter(e => !e.floor).length;
+  if (noFloor) add('warn', `ไม่ระบุชั้น ${noFloor} รายการ`);
+  const noRep = m.list.filter(e => !e.reporter).length;
+  if (noRep) add('err', `ไม่มีชื่อผู้แจ้ง ${noRep} รายการ`);
+  const offList = [...new Set(m.list.map(e => e.reporter).filter(n => n && !settings.reporters.includes(n)))];
+  if (offList.length) add('warn', `ผู้แจ้งที่ไม่อยู่ในรายชื่อปัจจุบัน: ${offList.slice(0, 4).join(', ')}${offList.length > 4 ? ` และอีก ${offList.length - 4} ชื่อ` : ''}`);
+  const other = m.list.filter(e => topicOf(e.title) === OTHER_TOPIC).length;
+  if (other) add('warn', `หัวข้อ "อื่นๆ" (ระบุเอง) ${other} รายการ — ตรวจว่าควรจัดเข้าหัวข้อมาตรฐานหรือไม่`);
+  const short = m.list.filter(e => e.content.trim().length < 10).length;
+  if (short) add('warn', `รายละเอียดสั้นผิดปกติ (ต่ำกว่า 10 ตัวอักษร) ${short} รายการ`);
+  const seen = new Map(); let dup = 0;
+  m.list.forEach(e => { const k = `${e.datetime}|${e.title}`; seen.has(k) ? dup++ : seen.set(k, 1); });
+  if (dup) add('warn', `อาจมีบันทึกซ้ำ (วันเวลาและหัวข้อเดียวกัน) ${dup} รายการ`);
+  if (new Date().getTimezoneOffset() !== -420) add('err', 'เขตเวลาของอุปกรณ์ไม่ใช่เวลาประเทศไทย (UTC+7) — วัน/เวลาในรายงานอาจคลาดเคลื่อน');
+  if (backendInfo && backendInfo.skewMin >= 5) add('err', `นาฬิกาอุปกรณ์คลาดเคลื่อนประมาณ ${backendInfo.skewMin} นาที`);
+  if (!total && !m.future) add('ok', 'ไม่มีเหตุการณ์ในช่วงนี้ — ใบรายงานจะระบุว่า "ไม่มีการบันทึกเหตุการณ์"');
+  if (out.every(c => c.level === 'ok')) add('ok', `ข้อมูล ${total} รายการ ครบถ้วนตามเงื่อนไขการตรวจสอบ`);
+  return out;
+}
+
+const pctTxt = (n, total) => total ? `${(n / total * 100).toFixed(1)}%` : '0.0%';
+function changeTxt(cur, prev) {
+  if (!prev && !cur) return { t: 'เท่าเดิม', c: C.muted };
+  if (!prev) return { t: `+${cur} (ช่วงก่อนไม่มี)`, c: '#dc2626' };
+  const diff = cur - prev, pc = (diff / prev * 100);
+  if (!diff) return { t: 'เท่าเดิม (0.0%)', c: C.muted };
+  return { t: `${diff > 0 ? '▲ +' : '▼ '}${diff} (${diff > 0 ? '+' : ''}${pc.toFixed(1)}%)`, c: diff > 0 ? '#dc2626' : '#059669' };
+}
+const RS = {
+  box: `border:1px solid ${C.line}; border-radius:10px; padding:8px 10px; background:#fff;`,
+  th: `border:1px solid #3730a3; background:${C.indigo}; color:#fff; padding:5px 6px; font-weight:700; font-size:11.5px; line-height:18px; text-align:center;`,
+  td: `border:1px solid ${C.line}; padding:4px 6px 6px; font-size:11.5px; line-height:18px; vertical-align:top;`
+};
+const secHead = (icon, text, color) => `<div style="display:flex; align-items:center; gap:6px; margin:0 0 5px;"><span style="width:4px; height:16px; border-radius:2px; background:${color};"></span><span style="font-family:'Prompt','Sarabun',sans-serif; font-weight:700; font-size:13px; line-height:22px; color:${C.navy};">${icon} ${text}</span></div>`;
+// ใช้โลโก้ PNG (apple-touch-icon) ในรายงาน — html2canvas วาดรูป SVG แบบ data-URI ผิดรูปบางเบราว์เซอร์
+const rptLogo = () => (document.querySelector('link[rel="apple-touch-icon"]') || $('favicon')).href;
+
+function rptHeader(m, compact) {
+  const logo = rptLogo();
+  const band = `background:linear-gradient(90deg, ${C.navy} 0%, ${C.indigo} 45%, ${C.violet} 75%, ${C.pink} 100%);`;
+  if (compact) return `<div style="${band} border-radius:10px; color:#fff; display:flex; justify-content:space-between; align-items:center; padding:6px 12px; margin-bottom:8px; font-size:11px; line-height:18px;">
+      <div style="display:flex; align-items:center; gap:8px;"><img src="${logo}" style="width:22px; height:22px; border-radius:6px; background:#fff;"><b style="font-family:Prompt,Sarabun,sans-serif;">รายงานสรุปบันทึกเหตุการณ์ประจำวัน (${RPT_TYPES[m.type]})</b><span style="opacity:.9;">· ${esc(periodText(m.type, m.p))}</span></div>
+      <div style="opacity:.95;">เลขที่ ${m.no}</div></div>`;
+  return `<div style="${band} border-radius:14px; color:#fff; display:flex; align-items:center; gap:14px; padding:12px 16px; margin-bottom:8px;">
+      <div style="width:58px; height:58px; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><img src="${logo}" style="width:50px; height:50px; border-radius:11px;"></div>
+      <div style="flex:1;">
+        <div style="font-size:12px; line-height:18px; opacity:.92;">${ORG_NAME}</div>
+        <div style="font-family:'Prompt','Sarabun',sans-serif; font-size:21px; font-weight:800; line-height:30px;">รายงานสรุปบันทึกเหตุการณ์ประจำวัน (${RPT_TYPES[m.type]})</div>
+        <div style="display:inline-block; margin-top:2px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); border-radius:999px; padding:1px 12px; font-size:13px; line-height:21px; font-weight:600;">${esc(periodText(m.type, m.p))}</div>
+      </div>
+      <div style="text-align:right; font-size:11px; line-height:19px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.3); border-radius:10px; padding:6px 10px;">
+        <div>เลขที่รายงาน <b>${m.no}</b></div>
+        <div>วันที่จัดทำ ${fmtDateNoDay(new Date())}</div>
+        <div>เวลา ${sheetTime(new Date())}</div>
+      </div></div>`;
+}
+function kpiBox(label, value, sub, color, small) {
+  // ไม่ใช้ overflow:hidden กับข้อความ — html2canvas ตัดสระบน/ล่างภาษาไทยขาด จึงให้ตัดบรรทัดแทน
+  return `<div style="flex:1; min-width:0; border-radius:10px; padding:7px 10px 8px; background:${color}12; border:1px solid ${color}55; border-top:4px solid ${color};">
+    <div style="font-size:11px; line-height:18px; color:#334155; font-weight:600;">${label}</div>
+    <div style="font-family:Prompt,Sarabun,sans-serif; font-size:${small ? 15 : 22}px; font-weight:800; color:${color}; line-height:${small ? 22 : 30}px; padding:2px 0;">${value}</div>
+    <div style="font-size:10.5px; line-height:16px; color:${sub && sub.c ? sub.c : C.muted};">${sub ? (sub.t || sub) : '&nbsp;'}</div></div>`;
+}
+function barList(rows, total, colorFn, max = 9) {
+  if (!rows.length) return `<div style="font-size:11px; color:#94a3b8; padding:6px 0;">— ไม่มีข้อมูล —</div>`;
+  const top = Math.max(1, ...rows.map(x => x[1])); // ใช้ค่าสูงสุดจริง (บางชุด เช่น ช่วงเวลา ไม่ได้เรียงจากมากไปน้อย)
+  return rows.slice(0, max).map(([k, n]) => `<div style="display:flex; align-items:center; gap:6px; font-size:11px; line-height:17px; margin:2px 0;">
+      <div style="width:44%; padding:1px 0;">${esc(k)}</div>
+      <div style="flex:1; height:10px; background:#eef2ff; border-radius:5px;"><div style="width:${(n / top * 100).toFixed(1)}%; height:10px; background:${colorFn(k)}; border-radius:5px;"></div></div>
+      <div style="width:66px; text-align:right;"><b>${n}</b> <span style="color:${C.muted};">${pctTxt(n, total)}</span></div></div>`).join('')
+    + (rows.length > max ? `<div style="font-size:10px; color:${C.muted};">และอื่นๆ อีก ${rows.length - max} รายการ</div>` : '');
+}
+function dayChart(m) {
+  const max = Math.max(1, ...m.perDay.map(x => x.n)), h = 70;
+  return `<div style="display:flex; align-items:flex-end; gap:${m.perDay.length > 10 ? 2 : 8}px; height:${h + 32}px; padding-top:4px;">${m.perDay.map(x => {
+    const we = [0, 6].includes(x.d.getDay());
+    return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; min-width:0;">
+      <div style="font-size:9px; color:#334155; line-height:12px;">${x.n || ''}</div>
+      <div style="width:100%; max-width:46px; height:${Math.max(x.n ? 3 : 1, Math.round(x.n / max * h))}px; background:${x.n ? (we ? 'linear-gradient(#f472b6,#db2777)' : 'linear-gradient(#818cf8,#6d28d9)') : '#e2e8f0'}; border-radius:3px 3px 0 0;"></div>
+      <div style="font-size:9px; color:${we ? '#db2777' : '#475569'}; margin-top:2px; line-height:11px; text-align:center;">${m.type === 'weekly' ? TH_DAYS_SHORT[x.d.getDay()] + '<br>' : ''}${x.d.getDate()}</div></div>`;
+  }).join('')}</div>`;
+}
+const FLOOR_COLORS = { 'ชั้น B': '#64748b', 'ชั้น 1': '#6366f1', 'ชั้น 2': '#0ea5e9', 'ชั้น 3': '#14b8a6', 'ชั้น 4': '#f59e0b', 'ชั้น 5': '#ec4899', 'ชั้น 6': '#a855f7', 'ดาดฟ้า': '#ef4444', 'ภายนอกอาคาร': '#22c55e' };
+const floorColorOf = (label) => FLOOR_COLORS[label] || '#94a3b8';
+// คืนเป็นหลายบล็อก เพื่อให้ตัวแบ่งหน้าย้ายบล็อกที่ไม่พอไปหน้าถัดไปได้
+function rptSummary(m) {
+  const total = m.list.length, ch = changeTxt(total, m.prevCount);
+  const topT = m.byTopic[0], topF = m.byFloor.filter(([k]) => k !== 'ไม่ระบุชั้น')[0];
+  const avg = m.elapsed ? (total / m.elapsed) : 0;
+  const topBand = [...m.bands].sort((a, b) => b.n - a.n)[0];
+  const k = [
+    kpiBox('จำนวนเหตุการณ์ทั้งหมด', `${total.toLocaleString('th-TH')} <span style="font-size:12px; font-weight:500; color:#334155;">เหตุการณ์</span>`, { t: `เทียบ${prevLabelOf(m.type)} (${m.prevCount}) ${ch.t}`, c: ch.c }, C.indigo),
+    m.type === 'daily'
+      ? kpiBox('ช่วงเวลาที่เกิดมากที่สุด', topBand && topBand.n ? topBand.label : '—', { t: topBand && topBand.n ? `${topBand.n} เหตุการณ์` : '' }, '#0284c7', true)
+      : kpiBox('เฉลี่ยต่อวัน', `${avg.toFixed(1)} <span style="font-size:12px; font-weight:500; color:#334155;">เหตุการณ์</span>`, { t: `มีเหตุการณ์ ${m.activeDays} จาก ${m.elapsed} วัน${m.elapsed < m.totalDays ? ' (นับถึงวันนี้)' : ''}` }, '#0284c7'),
+    m.type === 'daily'
+      ? kpiBox('จำนวนผู้แจ้ง', `${m.byReporter.filter(([k]) => k !== '-').length} <span style="font-size:12px; font-weight:500; color:#334155;">ท่าน</span>`, { t: m.byReporter[0] ? `มากสุด: ${esc(m.byReporter[0][0])}` : '' }, '#059669')
+      : kpiBox('วันที่มีเหตุการณ์มากที่สุด', m.peakDay ? fmtDateNoDay(m.peakDay.d) : '—', { t: m.peakDay ? `${fmtWeekday(m.peakDay.d)} · ${m.peakDay.n} เหตุการณ์` : '' }, '#059669', true),
+    kpiBox('หัวข้อที่พบมากที่สุด', topT ? esc(topT[0]) : '—', { t: topT ? `${topT[1]} ครั้ง (${pctTxt(topT[1], total)})` : '' }, '#d97706', true),
+    kpiBox('ชั้นที่พบมากที่สุด', topF ? esc(topF[0]) : '—', { t: topF ? `${topF[1]} ครั้ง (${pctTxt(topF[1], total)})` : '' }, C.pink, true)
+  ].join('');
+  const mid = m.type === 'daily'
+    ? `<div style="${RS.box} flex:1;">${secHead('⏰', 'แยกตามช่วงเวลา', '#0284c7')}${barList(m.bands.map(b => [b.label, b.n]), total, () => '#0ea5e9')}</div>`
+    : `<div style="${RS.box} flex:1;">${secHead('✍️', 'แยกตามผู้แจ้ง', '#059669')}${barList(m.byReporter, total, () => '#10b981', 6)}</div>`;
+  return [
+    `<div style="display:flex; gap:8px;">${k}</div>
+     <div style="display:flex; gap:8px; margin-top:8px;">
+       <div style="${RS.box} flex:1.3;">${secHead('🏷️', 'แยกตามหัวข้อเหตุการณ์', '#d97706')}${barList(m.byTopic, total, (k) => topicOf(k).color, 10)}</div>
+       <div style="${RS.box} flex:1;">${secHead('🏢', 'แยกตามชั้น', C.pink)}${barList(m.byFloor, total, floorColorOf, 10)}</div>
+       ${mid}
+     </div>`,
+    m.type === 'daily' ? '' : `<div style="${RS.box} margin-top:8px;">${secHead('📊', 'จำนวนเหตุการณ์รายวัน', C.violet)}${dayChart(m)}</div>`,
+    `<div style="border-radius:10px; padding:8px 12px; margin-top:8px; background:linear-gradient(90deg,#fffbeb,#fef3c7); border:1px solid #fcd34d;">${secHead('📝', 'สรุปผล', '#d97706')}
+      <ol style="margin:0; padding-left:18px; font-size:11.5px; line-height:20px; color:#422006;">${rptInsights(m).map(s => `<li>${s}</li>`).join('')}</ol></div>`
+  ].filter(Boolean);
+}
+// ข้อสรุปเป็นข้อความ — สร้างจากตัวเลขจริงเท่านั้น (ไม่คาดเดา)
+function rptInsights(m) {
+  const total = m.list.length, out = [], prevLabel = prevLabelOf(m.type);
+  if (!total) return [`ไม่มีการบันทึกเหตุการณ์ใน${m.type === 'daily' ? 'วันนี้' : 'ช่วงเวลานี้'} (${prevLabel}มี ${m.prevCount} เหตุการณ์)`];
+  const ch = changeTxt(total, m.prevCount);
+  out.push(`มีการบันทึกเหตุการณ์ทั้งสิ้น <b>${total}</b> เหตุการณ์ เทียบกับ${prevLabel} <b>${m.prevCount}</b> เหตุการณ์ (${ch.t})`);
+  out.push(`หัวข้อที่พบมาก ได้แก่ ${m.byTopic.slice(0, 3).map(([k, n]) => `${esc(k)} ${n} ครั้ง (${pctTxt(n, total)})`).join(', ')}`);
+  const f = m.byFloor.filter(([k]) => k !== 'ไม่ระบุชั้น').slice(0, 3).map(([k, n]) => `${esc(k)} ${n} ครั้ง`);
+  if (f.length) out.push(`พื้นที่ที่เกิดเหตุการณ์มาก ได้แก่ ${f.join(', ')}`);
+  const unk = (m.byFloor.find(([k]) => k === 'ไม่ระบุชั้น') || [0, 0])[1];
+  if (unk) out.push(`มีเหตุการณ์ที่ไม่ได้ระบุชั้น ${unk} รายการ (${pctTxt(unk, total)}) ควรระบุชั้นทุกครั้งเพื่อความครบถ้วนของข้อมูล`);
+  if (m.type !== 'daily' && m.peakDay && m.peakDay.n) out.push(`วันที่มีเหตุการณ์มากที่สุดคือ ${fmtDate(m.peakDay.d)} จำนวน ${m.peakDay.n} เหตุการณ์`);
+  const b = [...m.bands].sort((a, b) => b.n - a.n)[0];
+  if (b && b.n) out.push(`ช่วงเวลาที่เกิดเหตุการณ์มากที่สุดคือ ${b.label} (${b.n} เหตุการณ์ · ${pctTxt(b.n, total)})`);
+  if (m.ongoing) out.push(`<span style="color:#b45309;">ข้อมูล ณ วันที่ ${fmtDateNoDay(new Date())} เวลา ${sheetTime(new Date())} (ช่วงรายงานยังไม่สิ้นสุด)</span>`);
+  if (m.pending) out.push(`<span style="color:#b45309;">มี ${m.pending} รายการที่ยังไม่ได้ซิงก์ขึ้น Google Sheets ณ เวลาที่ออกรายงาน</span>`);
+  return out;
+}
+function rptRow(e, i, showDate, contentOverride, cont) {
+  const d = new Date(e.datetime), t = topicOf(e.title), zebra = i % 2 === 0 ? 'background:#f5f7ff;' : '';
+  const content = contentOverride != null ? contentOverride : e.content;
+  return `<tr style="${zebra}">
+    <td style="${RS.td} text-align:center; border-left:4px solid ${t.color};">${cont ? '' : i}</td>
+    ${showDate ? `<td style="${RS.td} white-space:nowrap; text-align:center;">${cont ? '' : `${sheetDate(d)}<div style="font-size:9.5px; line-height:14px; color:${C.muted};">${fmtWeekday(d)}</div>`}</td>` : ''}
+    <td style="${RS.td} white-space:nowrap; text-align:center;">${cont ? '' : sheetTime(d)}</td>
+    <td style="${RS.td} text-align:center;">${cont ? '' : esc(e.floor || '-')}</td>
+    <td style="${RS.td}">${cont ? `<span style="color:${C.muted};">(ต่อ)</span>` : `<span style="display:inline-block; padding:0 7px; border-radius:999px; background:${t.color}1f; color:${t.color}; font-weight:700; font-size:10.5px; line-height:17px;">${t.icon} ${esc(t === OTHER_TOPIC ? 'อื่นๆ' : t.label)}</span>${t === OTHER_TOPIC ? `<div style="font-weight:700;">${esc(e.title)}</div>` : ''}`}</td>
+    <td style="${RS.td} white-space:pre-wrap; word-break:break-word;">${esc(content)}</td>
+    <td style="${RS.td}">${cont ? '' : esc(e.reporter || '-')}</td>
+    <td style="${RS.td} font-size:10.5px;">${cont ? '' : esc(e.note || '')}</td></tr>`;
+}
+function rptTableHead(showDate) {
+  return `<thead><tr><th style="${RS.th} width:40px;">ลำดับ</th>${showDate ? `<th style="${RS.th} width:78px;">ว/ด/ป</th>` : ''}<th style="${RS.th} width:62px;">เวลา</th><th style="${RS.th} width:66px;">ชั้น</th>
+    <th style="${RS.th} width:165px;">หัวข้อเหตุการณ์</th><th style="${RS.th}">เหตุการณ์ประจำวัน (รายละเอียด)</th><th style="${RS.th} width:140px;">ผู้แจ้ง</th><th style="${RS.th} width:105px;">หมายเหตุ</th></tr></thead>`;
+}
+const dayRow = (d, n, cols) => `<tr><td colspan="${cols}" style="border:1px solid #c7d2fe; background:linear-gradient(90deg,#e0e7ff,#f5f3ff); padding:3px 8px; font-size:11.5px; line-height:18px; font-weight:700; color:${C.navy};">📅 ${fmtDate(d)} <span style="font-weight:500; color:${C.indigo};">· ${n} เหตุการณ์</span></td></tr>`;
+function rptSign() {
+  const s = (role, color) => `<div style="flex:1; text-align:center; font-size:12px; line-height:24px; border:1px solid ${color}55; background:${color}0d; border-radius:10px; padding:8px 6px;">
+      ลงชื่อ ...................................................<br>( ................................................... )<br><b style="color:${color};">${role}</b><br>วันที่ ........ / ........ / ............</div>`;
+  return `<div style="display:flex; gap:12px; margin-top:12px;">${s('ผู้จัดทำรายงาน', C.indigo)}${s('ผู้ตรวจสอบ', C.violet)}${s('ผู้อนุมัติ', C.pink)}</div>`;
+}
+
+// สร้างหน้ารายงานจริงใน host นอกจอ แล้ววัดความสูงเพื่อตัดหน้า
+async function buildReportPages(m) {
+  const host = $('reportHost');
+  host.innerHTML = '';
+  try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 4000))]); } catch (e) {} // รอฟอนต์ไทย (ไม่เกิน 4 วิ ถ้าออฟไลน์)
+  const pages = [];
+  const newPage = (first) => {
+    const pg = document.createElement('div');
+    pg.className = 'rpt-page';
+    pg.style.cssText = `width:${RPT_W}px; height:${RPT_H}px; padding:22px 28px 18px; box-sizing:border-box; background:#fff; color:${C.ink}; font-family:'Sarabun',sans-serif; line-height:1.55; position:relative; overflow:hidden; display:flex; flex-direction:column;`;
+    pg.innerHTML = rptHeader(m, !first) + `<div class="rpt-body" style="flex:1; overflow:hidden;"></div>
+      <div style="height:3px; border-radius:2px; background:linear-gradient(90deg, ${C.navy}, ${C.violet}, ${C.pink}); margin-top:4px;"></div>
+      <div style="display:flex; justify-content:space-between; padding-top:3px; font-size:10px; line-height:15px; color:${C.muted};">
+        <span>${ORG_NAME} · ระบบบันทึกเหตุการณ์ประจำวัน (SBK Daily Log ${APP_VERSION}) · เลขที่ ${m.no}</span><span class="rpt-no"></span></div>`;
+    host.appendChild(pg); pages.push(pg);
+    return pg.querySelector('.rpt-body');
+  };
+  const fits = (body) => body.scrollHeight <= body.clientHeight + 1;
+  let body = newPage(true);
+  // ส่วนที่ 1: สรุปภาพรวม (ทีละบล็อก ไม่พอหน้าให้ขึ้นหน้าใหม่)
+  rptSummary(m).forEach(html => {
+    const blk = document.createElement('div');
+    blk.innerHTML = html;
+    body.appendChild(blk);
+    if (!fits(body) && body.children.length > 1) { blk.remove(); body = newPage(false); body.appendChild(blk); }
+  });
+  // ส่วนที่ 2: ตารางรายละเอียด — หัวตารางซ้ำทุกหน้า, แถบวันที่คั่นแต่ละวัน (รายสัปดาห์/เดือน)
+  const showDate = m.type !== 'daily', cols = showDate ? 8 : 7;
+  let wrap, tb;
+  const startTable = (cont) => {
+    wrap = document.createElement('div');
+    wrap.innerHTML = `<div style="margin-top:8px;">${secHead('📋', cont ? 'รายละเอียดเหตุการณ์ (ต่อ)' : `รายละเอียดเหตุการณ์ (${m.list.length} รายการ)`, C.indigo)}</div>
+      <table style="width:100%; border-collapse:collapse; table-layout:fixed;">${rptTableHead(showDate)}<tbody></tbody></table>`;
+    body.appendChild(wrap);
+    tb = wrap.querySelector('tbody');
+  };
+  const nextPage = () => { body = newPage(false); startTable(true); };
+  startTable(false);
+  if (!fits(body)) { wrap.remove(); body = newPage(false); startTable(false); }
+  if (!m.list.length) tb.innerHTML = `<tr><td colspan="${cols}" style="${RS.td} text-align:center; color:${C.muted}; padding:14px;">— ไม่มีการบันทึกเหตุการณ์ในช่วงเวลานี้ —</td></tr>`;
+  // ความสูงของแถวเมื่อวางจริง (วัดแล้วเอาออก) — ใช้ตัดสินว่า "ขึ้นหน้าใหม่" หรือ "แบ่งข้อความต่อหน้า"
+  const measure = (html) => { tb.insertAdjacentHTML('beforeend', html); const n = tb.lastElementChild, h = n.getBoundingClientRect().height; n.remove(); return h; };
+  const tryPut = (html) => { tb.insertAdjacentHTML('beforeend', html); if (fits(body)) return true; tb.lastElementChild.remove(); return false; };
+  // พื้นที่ว่างของหน้าใหม่ (หักหัวกระดาษ/หัวตารางแล้ว) ≈ ความสูงส่วนเนื้อหา − ส่วนหัวตาราง
+  const freshCap = () => body.clientHeight - (wrap.getBoundingClientRect().height - tb.getBoundingClientRect().height) - 4;
+  // แถวที่รายละเอียดยาว: ตัดข้อความด้วยการค้นหาแบบทวิภาคให้เต็มพื้นที่ที่เหลือของหน้านี้ แล้วต่อหน้าถัดไปพร้อมป้าย "(ต่อ)"
+  const placeLong = (e, i) => {
+    let rest = e.content, first = true, guard = 0;
+    while (rest.length && guard++ < 300) {
+      let lo = 1, hi = rest.length, best = 0;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (tryPut(rptRow(e, i, showDate, rest.slice(0, mid) + (mid < rest.length ? ' …' : ''), !first))) { tb.lastElementChild.remove(); best = mid; lo = mid + 1; } else hi = mid - 1;
+      }
+      // เหลือที่น้อยเกินไป (ใส่ได้ไม่ถึง 40 ตัวอักษร) → ขึ้นหน้าใหม่แทน เพื่อไม่ให้เหลือเศษบรรทัดเดียวท้ายหน้า
+      if (best < Math.min(40, rest.length)) { nextPage(); continue; }
+      // ตัดที่ช่องว่าง/ขึ้นบรรทัดใกล้ที่สุด ไม่ตัดกลางคำ (ถ้าหาได้ในช่วงท้าย 30%)
+      let cut = best;
+      if (best < rest.length) { const sp = Math.max(rest.lastIndexOf(' ', best), rest.lastIndexOf('\n', best)); if (sp > best * 0.7) cut = sp + 1; }
+      tb.insertAdjacentHTML('beforeend', rptRow(e, i, showDate, rest.slice(0, cut).trimEnd() + (cut < rest.length ? ' …' : ''), !first));
+      rest = rest.slice(cut).trimStart(); first = false;
+      if (rest.length) nextPage();
+    }
+  };
+  let lastDay = '';
+  m.list.forEach((e, idx) => {
+    const d = new Date(e.datetime), k = dayKey(d);
+    const header = showDate && k !== lastDay ? dayRow(d, m.perDay.find(x => sameDay(x.d, d)).n, cols) : '';
+    lastDay = k;
+    const row = rptRow(e, idx + 1, showDate);
+    // 1) วางได้ทั้งแถบวันที่+แถวในหน้านี้
+    if (tryPut(header + row)) return;
+    const rowH = measure(row), headH = header ? measure(header) : 0;
+    // 2) แถวไม่ยาวเกินหน้าใหม่ → ขึ้นหน้าใหม่ (แถบวันที่ไปพร้อมแถวแรกของวัน ไม่ค้างท้ายหน้า)
+    if (rowH + headH <= freshCap()) { nextPage(); if (tryPut(header + row)) return; }
+    // 3) แถวยาวเกินหนึ่งหน้า → ใส่แถบวันที่ (ถ้ามี) แล้วแบ่งข้อความต่อเนื่องจากพื้นที่ที่เหลือ
+    if (header && !tryPut(header)) { nextPage(); tryPut(header); }
+    placeLong(e, idx + 1);
+  });
+  // ส่วนที่ 3: ช่องลงนาม
+  const sign = document.createElement('div');
+  sign.innerHTML = rptSign();
+  body.appendChild(sign);
+  if (!fits(body)) { sign.remove(); body = newPage(false); body.appendChild(sign); }
+  pages.forEach((pg, i) => { pg.querySelector('.rpt-no').textContent = `หน้า ${i + 1} / ${pages.length}`; });
+  return pages;
+}
+function rptAnchor() {
+  if (rptType === 'monthly') { const v = $('rptMonth').value || monthKey(new Date()); const [y, mo] = v.split('-').map(Number); return new Date(y, mo - 1, 1); }
+  const v = $('rptDate').value;
+  const mm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+  if (!mm) return new Date(); // ช่องวันที่ว่าง/ผิดรูป → ใช้วันนี้
+  return new Date(+mm[1], +mm[2] - 1, +mm[3]);
+}
+function setVerified(v) {
+  rptVerified = v;
+  $('rptConfirm').checked = v;
+  const block = !v || !rptModel || rptModel.future;
+  ['btnRptPdf', 'btnRptJpg', 'btnRptPrint'].forEach(id => { const b = $(id); b.disabled = block; b.classList.toggle('opacity-50', block); b.classList.toggle('cursor-not-allowed', block); });
+  $('rptIssueHint').textContent = rptModel && rptModel.future ? 'ช่วงเวลานี้ยังมาไม่ถึง จึงออกใบรายงานไม่ได้' : (v ? 'พร้อมออกใบรายงาน' : 'กรุณาตรวจตัวอย่าง แล้วติ๊กยืนยันก่อนออกใบรายงาน');
+}
+let rptBusy = false, rptQueued = false;
+async function renderReportPreview() {
+  if (rptBusy) { rptQueued = true; return; }
+  rptBusy = true;
+  try {
+    $('rptType').innerHTML = Object.entries(RPT_TYPES).map(([k, v]) => `<button data-rtype="${k}" class="px-3 py-1.5 rounded-lg transition ${rptType === k ? 'bg-white dark:bg-slate-700 shadow font-semibold text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'}">${v}</button>`).join('');
+    $('rptDateWrap').classList.toggle('hidden', rptType === 'monthly');
+    $('rptMonthWrap').classList.toggle('hidden', rptType !== 'monthly');
+    const m = rptModel = buildReportModel(rptType, rptAnchor());
+    setVerified(false); // เปลี่ยนช่วง/ข้อมูลเปลี่ยน → ต้องตรวจใหม่ทุกครั้ง
+    $('rptPeriod').textContent = `${periodText(m.type, m.p)} · ${m.list.length.toLocaleString('th-TH')} เหตุการณ์`;
+    const checks = reportChecks(m), icon = { ok: '✅', warn: '⚠️', err: '⛔' };
+    const nWarn = checks.filter(c => c.level !== 'ok').length;
+    $('rptChecks').innerHTML = `<p class="font-semibold text-sm mb-1">${nWarn ? `🔎 ผลตรวจก่อนออกรายงาน: พบ ${nWarn} ข้อที่ควรตรวจสอบ` : '🔎 ผลตรวจก่อนออกรายงาน: ไม่พบปัญหา'}</p>` +
+      checks.map(c => `<p class="text-xs leading-relaxed ${c.level === 'err' ? 'text-rose-600 dark:text-rose-400 font-medium' : c.level === 'warn' ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}">${icon[c.level]} ${esc(c.text)}</p>`).join('');
+    const pages = await buildReportPages(m);
+    $('rptPages').textContent = `ตัวอย่าง ${pages.length} หน้า`;
+    // ตัวอย่าง = สำเนาของหน้าจริงย่อขนาดให้พอดีจอ (ไฟล์ที่ออกใช้หน้าจริงขนาดเต็ม)
+    const pv = $('rptPreview'), avail = Math.max(280, pv.clientWidth - 24), s = Math.min(1, avail / RPT_W);
+    pv.innerHTML = pages.map((pg, i) => `<div style="width:${RPT_W * s}px; height:${RPT_H * s}px; margin:0 auto; box-shadow:0 6px 24px rgba(15,23,42,.25); background:#fff; overflow:hidden; border-radius:4px;"><div data-pv="${i}" style="transform:scale(${s}); transform-origin:top left;"></div></div>`).join('');
+    pages.forEach((pg, i) => pv.querySelector(`[data-pv="${i}"]`).appendChild(pg.cloneNode(true)));
+    $('reportHost').innerHTML = ''; // ล้างหน้าจริงที่ใช้วัด (ลดหน่วยความจำ) — ตอนออกไฟล์จะสร้างใหม่
+  } catch (err) {
+    console.error(err);
+    $('rptPreview').innerHTML = `<p class="text-center text-rose-600 py-10">สร้างตัวอย่างรายงานไม่สำเร็จ: ${esc(err.message || err)}</p>`;
+  } finally {
+    rptBusy = false;
+    if (rptQueued) { rptQueued = false; renderReportPreview(); }
+  }
+}
+async function openReport() {
+  $('rptDate').value = toDateInput(new Date());
+  const months = [...new Set([monthKey(new Date()), ...entries.map(e => monthKey(new Date(e.datetime)))])].sort().reverse();
+  $('rptMonth').innerHTML = months.map(mk => { const [y, mo] = mk.split('-').map(Number); return `<option value="${mk}">${fmtMonth(y, mo - 1)}</option>`; }).join('');
+  rptModel = null; setVerified(false);
+  openModal('reportModal');
+  $('rptChecks').innerHTML = '';
+  $('rptPreview').innerHTML = '<p class="text-center text-slate-500 py-10"><span class="spinner"></span> กำลังดึงข้อมูลล่าสุดและเตรียมตัวอย่างรายงาน...</p>';
+  // ดึงข้อมูลล่าสุดก่อนออกรายงาน เพื่อให้รวมเหตุการณ์จากทุกเครื่อง (ถ้าเกิน 1 นาทีจากครั้งล่าสุด)
+  if (navigator.onLine && (backendVer === null || backendVer >= BACKEND_MIN_PULL) && Date.now() - lastPull > 60000) {
+    if (backendVer === null) await checkBackend();
+    if (backendVer >= BACKEND_MIN_PULL) await pullFromSheet({ silent: true });
+  }
+  setTimeout(renderReportPreview, 280); // รอแอนิเมชันเปิด modal เสร็จ เพื่อวัดความกว้างพื้นที่ตัวอย่างได้ถูกต้อง
+}
+// ก่อนออกไฟล์: ตรวจว่ายังเป็นข้อมูลชุดเดียวกับตัวอย่างที่ผู้ใช้ยืนยัน (กันข้อมูลเปลี่ยนระหว่างนั้น เช่น ดึงข้อมูลใหม่เข้ามา)
+function guardIssue() {
+  if (!rptVerified || !rptModel) { toast('กรุณาตรวจตัวอย่างและติ๊กยืนยันก่อนออกใบรายงาน', 'info'); return null; }
+  const m = buildReportModel(rptType, rptAnchor());
+  const sig = (x) => x.list.map(e => `${e.id}|${e.datetime}|${e.title}|${e.content}|${e.floor}|${e.reporter}|${e.note}`).join('§');
+  if (m.type !== rptModel.type || +m.p.start !== +rptModel.p.start || sig(m) !== sig(rptModel)) {
+    toast('ข้อมูลมีการเปลี่ยนแปลงหลังจากดูตัวอย่าง ระบบแสดงตัวอย่างใหม่แล้ว กรุณาตรวจและยืนยันอีกครั้ง', 'error');
+    renderReportPreview(); return null;
+  }
+  return m;
+}
+const rptFileName = (m) => `รายงานบันทึกเหตุการณ์_${RPT_TYPES[m.type]}_${m.no}`;
+const libsReady = () => typeof html2canvas !== 'undefined' && window.jspdf && window.jspdf.jsPDF;
+// วาดทีละหน้าแล้วส่งต่อทันที (ไม่เก็บทุกหน้าไว้พร้อมกัน) — รายงานรายเดือนหลายสิบหน้าจะไม่กินหน่วยความจำจนเบราว์เซอร์มือถือค้าง
+async function capturePages(m, onPage) {
+  const pages = await buildReportPages(m);
+  const scale = pages.length > 12 ? 1.5 : 2;
+  for (let i = 0; i < pages.length; i++) {
+    markActive(); // กันพักหน้าจอระหว่างสร้างไฟล์
+    const c = await html2canvas(pages[i], { scale, useCORS: true, backgroundColor: '#ffffff', width: RPT_W, height: RPT_H, windowWidth: RPT_W, logging: false });
+    await onPage(c, i, pages.length);
+    c.width = c.height = 0; // คืนหน่วยความจำ
+  }
+  return pages.length;
+}
+async function exportReportPdf() {
+  const m = guardIssue(); if (!m) return;
+  if (!libsReady()) return toast('โหลดเครื่องมือสร้าง PDF ไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต) — ใช้ปุ่ม "พิมพ์" แล้วเลือก "บันทึกเป็น PDF" แทนได้', 'error');
+  const btn = $('btnRptPdf'); setLoading(btn, true, 'กำลังสร้าง PDF...');
+  try {
+    const pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
+    const n = await capturePages(m, (c, i) => { if (i) pdf.addPage('a4', 'landscape'); pdf.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 297, 210, undefined, 'FAST'); });
+    pdf.setProperties({ title: `รายงานสรุปบันทึกเหตุการณ์ประจำวัน (${RPT_TYPES[m.type]}) ${m.no}`, author: ORG_NAME, creator: `SBK Daily Log ${APP_VERSION}` });
+    pdf.save(`${rptFileName(m)}.pdf`);
+    toast(`ออกใบรายงาน PDF สำเร็จ (${n} หน้า)`);
+  } catch (err) { console.error(err); toast(`สร้าง PDF ไม่สำเร็จ: ${err.message || err} — ลองใช้ปุ่ม "พิมพ์" แทน`, 'error'); }
+  finally { $('reportHost').innerHTML = ''; setLoading(btn, false); }
+}
+async function exportReportJpg() {
+  const m = guardIssue(); if (!m) return;
+  if (typeof html2canvas === 'undefined') return toast('โหลดเครื่องมือสร้างภาพไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต)', 'error');
+  const btn = $('btnRptJpg'); setLoading(btn, true, 'กำลังสร้างภาพ...');
+  try {
+    const n = await capturePages(m, async (c, i, total) => {
+      const blob = await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('แปลงภาพไม่สำเร็จ')), 'image/jpeg', 0.95));
+      download(`${rptFileName(m)}${total > 1 ? `_หน้า${i + 1}` : ''}.jpg`, blob);
+      await new Promise(r => setTimeout(r, 400)); // เว้นจังหวะ กันเบราว์เซอร์บล็อกการดาวน์โหลดหลายไฟล์
+    });
+    toast(`ออกใบรายงาน JPEG สำเร็จ (${n} ไฟล์)${n > 1 ? ' — หากได้ไม่ครบ ให้อนุญาต "ดาวน์โหลดหลายไฟล์" ในเบราว์เซอร์' : ''}`);
+  } catch (err) { console.error(err); toast(`สร้างภาพไม่สำเร็จ: ${err.message || err}`, 'error'); }
+  finally { $('reportHost').innerHTML = ''; setLoading(btn, false); }
+}
+// พิมพ์/บันทึก PDF ผ่านเบราว์เซอร์ — ใช้ได้แม้โหลดไลบรารีไม่สำเร็จ และได้ตัวอักษรคมชัด (vector)
+async function printReport() {
+  const m = guardIssue(); if (!m) return;
+  const btn = $('btnRptPrint'); setLoading(btn, true, 'กำลังเตรียม...');
+  try {
+    const pages = await buildReportPages(m);
+    const w = window.open('', '_blank');
+    if (!w) throw new Error('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาต Pop-up สำหรับหน้านี้');
+    const fontLink = document.querySelector('link[href*="fonts.googleapis"]');
+    w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>${rptFileName(m)}</title>${fontLink ? fontLink.outerHTML : ''}
+      <style>@page{size:A4 landscape;margin:0} html,body{margin:0;background:#fff} .rpt-page{page-break-after:always;break-after:page} .rpt-page:last-child{page-break-after:auto}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact} @media screen{body{background:#e2e8f0} .rpt-page{margin:12px auto;box-shadow:0 4px 20px rgba(0,0,0,.2)}}</style></head><body>${pages.map(p => p.outerHTML).join('')}</body></html>`);
+    w.document.close();
+    const go = () => { try { w.focus(); w.print(); } catch (e) {} };
+    (w.document.fonts ? w.document.fonts.ready : Promise.resolve()).then(() => setTimeout(go, 300));
+    toast('เปิดหน้าพิมพ์แล้ว — เลือกเครื่องพิมพ์ หรือ "บันทึกเป็น PDF" (กระดาษ A4 แนวนอน)', 'info');
+  } catch (err) { toast(`พิมพ์ไม่สำเร็จ: ${err.message || err}`, 'error'); }
+  finally { $('reportHost').innerHTML = ''; setLoading(btn, false); }
+}
+
+/* ---------- 13) Dark mode ---------- */
+function applyTheme(dark) {
+  document.documentElement.classList.toggle('dark', dark);
+  $('btnTheme').textContent = dark ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (e) {}
+}
+function initTheme() {
+  let saved = null; try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+  applyTheme(saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+
+/* ---------- 14) PWA: โลโก้บนหน้าจอโฮม (มือถือ/คอมพิวเตอร์) ---------- */
+// ทำไมสร้าง manifest ด้วย JS: ต้องการให้ยังเป็นไฟล์ HTML ไฟล์เดียว จึงวาด PNG จาก SVG ในตัว แล้วสร้าง manifest เป็น Blob URL
+// ข้อจำกัด: การติดตั้งต้องเปิดผ่าน https (เช่น GitHub Pages) — ถ้าเปิดจาก file:// เบราว์เซอร์จะไม่ให้ติดตั้ง
+let deferredInstall = null;
+function svgToPng(size) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = c.height = size;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#4f46e5'; ctx.fillRect(0, 0, size, size); // พื้นเต็มกรอบ รองรับไอคอนแบบ maskable ของ Android
+        ctx.drawImage(img, 0, 0, size, size);
+        resolve(c.toDataURL('image/png'));
+      } catch (e) { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(LOGO_SVG);
+  });
+}
+async function setupPwa() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS && !isStandalone) showInstallBtn(); // iOS ไม่มี beforeinstallprompt จึงแสดงวิธีติดตั้งแทน
+
+  window.addEventListener('beforeinstallprompt', (ev) => { ev.preventDefault(); deferredInstall = ev; showInstallBtn(); });
+  window.addEventListener('appinstalled', () => { deferredInstall = null; $('btnInstall').classList.add('hidden'); toast('ติดตั้งแอปบนหน้าจอเรียบร้อยแล้ว'); });
+
+  if (!/^https?:$/.test(location.protocol)) return;
+  try {
+    const [p192, p512] = await Promise.all([svgToPng(192), svgToPng(512)]);
+    if (!p192 || !p512) return;
+    const base = location.href.split('#')[0].split('?')[0];
+    const manifest = {
+      name: 'SBK บันทึกเหตุการณ์ประจำวัน', short_name: 'บันทึกเหตุการณ์', description: 'สมุดบันทึกเหตุการณ์ประจำวัน ศูนย์การค้าซีคอนบางแค',
+      start_url: base, scope: base.replace(/[^/]*$/, ''), id: base, display: 'standalone', orientation: 'any',
+      background_color: '#0b1026', theme_color: '#4f46e5', lang: 'th',
+      icons: [
+        { src: p192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: p512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: p512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+      ]
+    };
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' }));
+    document.head.appendChild(link);
+  } catch (e) { /* ไม่กระทบการใช้งานหลัก */ }
+}
+function showInstallBtn() { const b = $('btnInstall'); b.classList.remove('hidden'); b.classList.add('flex'); }
+async function handleInstall() {
+  if (deferredInstall) {
+    deferredInstall.prompt();
+    const r = await deferredInstall.userChoice.catch(() => null);
+    deferredInstall = null;
+    if (r && r.outcome === 'accepted') $('btnInstall').classList.add('hidden');
+    else toast('ยกเลิกการติดตั้ง สามารถกดติดตั้งได้อีกครั้งภายหลัง', 'info');
+  } else openModal('iosModal');
+}
+
+/* ---------- 15) Splash + พักหน้าจอ (Screensaver) ---------- */
+let splashMode = null, splashClock = null, splashEnter = null, lastActive = Date.now();
+function greeting(h) {
+  if (h < 5) return 'สวัสดีตอนดึก · ขอให้ปฏิบัติงานอย่างปลอดภัย';
+  if (h < 12) return 'สวัสดีตอนเช้า · พร้อมบันทึกเหตุการณ์ประจำวัน';
+  if (h < 17) return 'สวัสดีตอนบ่าย · บันทึกทุกเหตุการณ์ในพื้นที่';
+  if (h < 20) return 'สวัสดีตอนเย็น · ขอบคุณที่ดูแลศูนย์ฯ';
+  return 'สวัสดีตอนค่ำ · ขอให้ปฏิบัติงานอย่างปลอดภัย';
+}
+function tickSplash() {
+  const d = new Date();
+  $('spHM').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  $('spSec').textContent = `:${pad(d.getSeconds())}`;
+  // ประกอบวันที่เองเพื่อให้ได้รูปแบบ "วันเสาร์ที่ 17 ตุลาคม พ.ศ. 2569" (วันในสัปดาห์มาจาก Date จริง)
+  $('spDate').textContent = `${d.toLocaleDateString('th-TH', { weekday: 'long' })}ที่ ${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} พ.ศ. ${d.getFullYear() + 543}`;
+  $('spGreet').textContent = greeting(d.getHours());
+}
+function showSplash(mode) {
+  const s = $('splash');
+  splashMode = mode;
+  s.dataset.mode = mode;
+  clearTimeout(splashEnter);
+  $('spBarWrap').classList.toggle('hidden', mode !== 'intro');
+  $('spHint').textContent = mode === 'intro' ? 'กำลังเข้าสู่ระบบ... แตะเพื่อเข้าทันที' : 'พักหน้าจอ · แตะหน้าจอหรือกดปุ่มใดก็ได้เพื่อกลับเข้าใช้งาน';
+  if (mode === 'idle') {
+    const st = countStats();
+    $('spStats').innerHTML = [`📅 วันนี้ ${st.today.toLocaleString('th-TH')} รายการ`, `🗓️ เดือนนี้ ${st.month.toLocaleString('th-TH')} รายการ`, pendingCount() ? `☁️ รอซิงก์ ${pendingCount().toLocaleString('th-TH')}` : '']
+      .filter(Boolean).map(t => `<span class="px-3 py-1 rounded-full bg-white/10 border border-white/15">${t}</span>`).join('');
+    $('spStats').classList.remove('hidden');
+  } else $('spStats').classList.add('hidden');
+
+  s.classList.remove('hidden', 'splash-out');
+  void s.offsetWidth; // รีสตาร์ทแอนิเมชันทุกครั้งที่แสดง
+  s.classList.add('splash-in');
+  tickSplash(); clearInterval(splashClock); splashClock = setInterval(tickSplash, 1000);
+  bgFx.stop();
+
+  if (mode === 'intro') {
+    const bar = $('spBar'); bar.style.setProperty('--dur', SPLASH_MS + 'ms');
+    bar.classList.remove('run'); void bar.offsetWidth; bar.classList.add('run');
+    splashEnter = setTimeout(hideSplash, SPLASH_MS);
+  }
+}
+function hideSplash() {
+  if (!splashMode) return;
+  splashMode = null; clearTimeout(splashEnter);
+  const s = $('splash');
+  s.classList.remove('splash-in'); s.classList.add('splash-out');
+  // ซ่อนจริงหลังแอนิเมชันจบ — ระหว่างนี้ splash ยังรับการแตะไว้ จึงไม่มีการคลิกทะลุไปโดนปุ่มด้านล่าง
+  setTimeout(() => { if (!splashMode) { s.classList.add('hidden'); clearInterval(splashClock); } }, 600);
+  bgFx.start(); markActive();
+}
+function markActive() { lastActive = Date.now(); }
+// ตรวจด้วย setInterval + เวลาจริง แทน setTimeout ยาวๆ เพราะเบราว์เซอร์มือถือหน่วงตัวจับเวลาเมื่อพับจอ/สลับแอป
+function checkIdle() {
+  if (splashMode || !settings.idleMin) return;
+  if (Date.now() - lastActive >= settings.idleMin * 60000) showSplash('idle');
+}
+function initIdle() {
+  let last = 0;
+  const onAct = () => { const t = Date.now(); if (t - last > 800) { last = t; markActive(); } };
+  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll', 'input'].forEach(ev => window.addEventListener(ev, onAct, { passive: true, capture: true }));
+  setInterval(checkIdle, 5000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkIdle(); });
+  const s = $('splash');
+  s.addEventListener('pointerdown', (ev) => { ev.preventDefault(); hideSplash(); });
+  document.addEventListener('keydown', (ev) => { if (splashMode) { ev.preventDefault(); ev.stopPropagation(); hideSplash(); } }, true);
+}
+function initLiveClock() {
+  const t = () => { const d = new Date(); $('liveClock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} น.`; };
+  t(); setInterval(t, 1000);
+  // อัปเดตป้ายวันที่และ KPI "วันนี้" เมื่อข้ามเที่ยงคืน (แอปมักเปิดค้างข้ามวันที่จุดปฏิบัติงาน)
+  let day = new Date().getDate();
+  setInterval(() => { const d = new Date(); if (d.getDate() !== day) { day = d.getDate(); $('todayLabel').textContent = fmtDate(d); renderStats(); } }, 30000);
+}
+
+/* ---------- 16) พื้นหลังเคลื่อนไหว (Particle network) ---------- */
+// วาดบน canvas เดียว จำนวนจุดปรับตามขนาดจอ และหยุดวาดเมื่อซ่อนแท็บ/แสดง Splash เพื่อไม่กินแบตเตอรี่มือถือ
+const bgFx = (() => {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let cv, ctx, pts = [], raf = null, w = 0, h = 0, dpr = 1, running = false;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth; h = window.innerHeight;
+    cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.max(18, Math.min(70, Math.round(w * h / 22000)));
+    pts = Array.from({ length: n }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35, r: Math.random() * 1.8 + .8 }));
+    if (!running) frame(true);
+  }
+  function frame(once) {
+    const dark = document.documentElement.classList.contains('dark');
+    const rgb = dark ? '165,180,252' : '99,102,241';
+    ctx.clearRect(0, 0, w, h);
+    const link = 130;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (!once) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h) p.vy *= -1; }
+      for (let j = i + 1; j < pts.length; j++) {
+        const q = pts[j], dx = p.x - q.x, dy = p.y - q.y, dist = Math.hypot(dx, dy);
+        if (dist < link) { ctx.strokeStyle = `rgba(${rgb},${(1 - dist / link) * (dark ? .28 : .22)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); }
+      }
+      ctx.fillStyle = `rgba(${rgb},${dark ? .7 : .5})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+    if (!once && running) raf = requestAnimationFrame(() => frame(false));
+  }
+  return {
+    init() {
+      cv = $('bgCanvas'); ctx = cv.getContext('2d');
+      resize(); window.addEventListener('resize', resize);
+      document.addEventListener('visibilitychange', () => { document.hidden ? this.stop() : (!splashMode && this.start()); });
+    },
+    start() {
+      document.documentElement.classList.remove('fx-paused');
+      if (reduce || running || !ctx) return;
+      running = true; raf = requestAnimationFrame(() => frame(false));
+    },
+    stop() { document.documentElement.classList.add('fx-paused'); running = false; if (raf) cancelAnimationFrame(raf); raf = null; }
+  };
+})();
+
+/* ---------- 17) Event handlers ---------- */
+function handleEvents() {
+  $('btnNew').onclick = () => openForm();
+  $('btnSave').onclick = async () => { const b = $('btnSave'); if (b.disabled) return; setLoading(b, true, 'กำลังบันทึก...'); try { await submitForm(); } finally { setLoading(b, false); } };
+  $('btnConfirmDelete').onclick = doDelete;
+  $('btnTheme').onclick = () => applyTheme(!document.documentElement.classList.contains('dark'));
+  $('btnLock').onclick = () => showSplash('idle');
+  $('btnInstall').onclick = handleInstall;
+  $('btnExportJson').onclick = exportJson;
+  $('btnImportJson').onclick = () => $('fileImport').click();
+  $('fileImport').onchange = (e) => importJson(e.target.files[0]);
+  $('btnPull').onclick = async () => { const b = $('btnPull'); setLoading(b, true, 'กำลังดึงข้อมูล...'); try { await pullFromSheet(); } finally { setLoading(b, false); } };
+  $('btnReport').onclick = openReport;
+  $('btnRptPdf').onclick = exportReportPdf;
+  $('btnRptJpg').onclick = exportReportJpg;
+  $('btnRptPrint').onclick = printReport;
+  $('rptConfirm').onchange = (e) => setVerified(e.target.checked);
+  $('rptType').onclick = (ev) => { const b = ev.target.closest('[data-rtype]'); if (b && b.dataset.rtype !== rptType) { rptType = b.dataset.rtype; renderReportPreview(); } };
+  $('rptDate').onchange = renderReportPreview;
+  $('rptMonth').onchange = renderReportPreview;
+  $('btnSheetStatus').onclick = openSettings;
+  $('btnSaveSettings').onclick = saveSettings;
+  $('btnTest').onclick = testConnection;
+  $('btnSyncAll').onclick = syncAllNow;
+  $('btnResetReporters').onclick = resetReporters;
+  $('searchInput').oninput = (e) => { searchText = e.target.value; renderList(); };
+  $('filterReporter').onchange = (e) => { filterReporter = e.target.value; renderList(); };
+  $('filterFloor').onchange = (e) => { filterFloor = e.target.value; renderList(); };
+  $('filterTopic').onchange = (e) => { filterTopic = e.target.value; renderList(); };
+  $('filterMonth').onchange = (e) => { filterMonth = e.target.value; renderList(); };
+  $('rangeChips').onclick = (ev) => { const b = ev.target.closest('[data-range]'); if (b) { filterRange = b.dataset.range; renderFilters(); renderList(); } };
+  $('topicSummary').onclick = (ev) => { const b = ev.target.closest('[data-topic]'); if (b) { filterTopic = filterTopic === b.dataset.topic ? '' : b.dataset.topic; renderFilters(); renderList(); } };
+  $('fDate').oninput = renderAutoFields;
+  $('fTopic').onchange = toggleOtherTitle;
+  // ซ่อนข้อความแจ้งเตือนเมื่อผู้ใช้เริ่มแก้ไขฟอร์ม เพื่อไม่ให้ค้างข้อความเก่า
+  $('entryModal').addEventListener('input', () => $('formError').classList.add('hidden'));
+  $('entryModal').addEventListener('change', () => $('formError').classList.add('hidden'));
+
+  document.addEventListener('click', (ev) => { const c = ev.target.closest('[data-close]'); if (c) closeModal(c.dataset.close); });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') ['iosModal', 'confirmModal', 'sheetModal', 'detailModal', 'reportModal', 'entryModal'].forEach(id => { if (!$(id).classList.contains('hidden')) closeModal(id); });
+  });
+  window.addEventListener('online', () => syncAndPull(true));
+  // แท็บอื่นในเครื่องเดียวกันบันทึกข้อมูล → รวมรายการใหม่เข้ามาแสดงทันที
+  window.addEventListener('storage', (ev) => { if (ev.key === STORAGE_KEY && mergeFromStorage()) render(); });
+  // ข้อผิดพลาดที่ไม่ได้ดักไว้ → แจ้งผู้ใช้เป็นภาษาไทยแทนการค้างเงียบ (ไม่แจ้งซ้ำถี่)
+  let lastErrToast = 0;
+  const onUnhandled = (msg) => { console.error(msg); if (Date.now() - lastErrToast > 8000) { lastErrToast = Date.now(); toast('เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่ หากยังพบปัญหาให้กดสำรองข้อมูลแล้วรีเฟรชหน้า', 'error'); } };
+  window.addEventListener('error', (ev) => { if (ev.message && !/ResizeObserver|Script error/.test(ev.message)) onUnhandled(ev.message); });
+  window.addEventListener('unhandledrejection', (ev) => onUnhandled(ev.reason));
+  // กลับมาที่แอปหลังพักไว้นาน → ดึงข้อมูลล่าสุดจากชีตอัตโนมัติ (ไม่ถี่เกิน 3 นาที)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastPull > 180000) syncAndPull(true); });
+
+  $('entryList').onclick = (ev) => {
+    const card = ev.target.closest('[data-id]');
+    if (!card) return;
+    const btn = ev.target.closest('button[data-action]');
+    const id = card.dataset.id;
+    if (!btn) return openDetail(id); // แตะที่การ์ด = ดูรายละเอียด
+    ev.stopPropagation();
+    if (btn.dataset.action === 'edit') openForm(id);
+    else if (btn.dataset.action === 'delete') askDelete(id);
+    else { expanded.has(id) ? expanded.delete(id) : expanded.add(id); renderList(); }
+  };
+}
+
+/* ---------- 18) Init ---------- */
+// ลำดับ: ตรวจเวอร์ชัน Code.gs → ส่งรายการค้างขึ้นชีต → ดึงข้อมูลทั้งหมดกลับมารวม
+// ถ้า Code.gs เก่ากว่า v5 จะไม่ส่ง (กันข้อมูลลงผิดคอลัมน์) และถ้าต่ำกว่า v6 จะส่งได้แต่ดึงกลับไม่ได้
+let warnedOld = false;
+async function syncAndPull(silent) {
+  if (!navigator.onLine) return;
+  const v = await checkBackend();
+  if (v >= 0 && v < BACKEND_MIN_WRITE) {
+    if (!warnedOld) toast('Code.gs บน Google ยังเป็นเวอร์ชันเก่า — ข้อมูลยังไม่ถูกส่งขึ้นชีต กรุณาอัปเดต Code_Daily_Log_v7.gs', 'error');
+    warnedOld = true; return;
+  }
+  if (pendingCount()) { const r = await syncPending(); if (r.ok && !silent) toast(`ซิงก์รายการค้างขึ้น Google Sheets ${r.ok.toLocaleString('th-TH')} รายการ`); }
+  if (v >= BACKEND_MIN_PULL) await pullFromSheet({ silent: true });
+  else if (v >= BACKEND_MIN_WRITE && !warnedOld) { warnedOld = true; toast('อัปเดต Code_Daily_Log_v7.gs เพื่อให้ทุกเครื่องเห็นข้อมูลชุดเดียวกัน (ตอนนี้แสดงเฉพาะข้อมูลในเครื่องนี้)', 'info'); }
+  else if (v < 0 && !silent) toast(`เชื่อมต่อ Google Sheets ไม่ได้: ${backendInfo && backendInfo.errorText}`, 'error');
+}
+function init() {
+  initTheme();
+  loadAll();
+  // บันทึกจากเวอร์ชันก่อนที่ยังไม่เคยซิงก์ ให้ถือเป็น "รอซิงก์"
+  entries.forEach(e => { if (!e.sync) e.sync = 'pending'; });
+  // v6 เพิ่มคอลัมน์ชั้นในชีต จึงต้องส่งข้อมูลทั้งหมดขึ้นใหม่หนึ่งครั้งหลังอัปเกรด
+  if (readJson(SCHEMA_KEY, 0) < 5) { entries.forEach(e => { e.sync = 'pending'; }); writeJson(SCHEMA_KEY, 5); saveEntries(); }
+  $('todayLabel').textContent = fmtDate(new Date());
+  bgFx.init();
+  showSplash('intro');          // แสดงโลโก้ + วันเวลา แล้วเข้าแอปอัตโนมัติ
+  initIdle();
+  initLiveClock();
+  handleEvents();
+  render();
+  updatePullInfo();
+  setupPwa();
+  // เขตเวลาเครื่องไม่ใช่ไทย → วัน/เวลาที่บันทึกจะเลื่อน จึงเตือนตั้งแต่เปิดแอป
+  if (new Date().getTimezoneOffset() !== -420) setTimeout(() => toast('เขตเวลาของอุปกรณ์นี้ไม่ใช่เวลาประเทศไทย (UTC+7) กรุณาตั้งค่าเขตเวลาให้ถูกต้องก่อนบันทึก', 'error'), SPLASH_MS + 500);
+  syncAndPull(true).catch(e => console.error(e));
+}
+init();
+</script>
+</body>
+</html>
