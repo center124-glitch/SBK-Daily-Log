@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SBK บันทึกเหตุการณ์ประจำวัน v9 | Daily Log</title>
+<title>SBK บันทึกเหตุการณ์ประจำวัน v10 | Daily Log</title>
 <!--
-  SBK_Daily_Log_v9.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  SBK_Daily_Log_v10.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  v10: • ช่วงวัน + ตัวกรองอยู่แถวเดียวกัน · รายการแสดงเป็นตาราง "ประวัติบันทึกเหตุการณ์แบบละเอียด" (คอลัมน์ตามการบันทึก)
+         เรียงวันที่ได้ · แบ่งหน้า 25/50/100/ทั้งหมด · แถบคั่นวัน · ปุ่มดู/แก้ไข/ลบ · จอมือถือแสดงเป็นการ์ด
   v9: • ขยายพื้นที่แสดงผลเป็น 1500px (จอกว้างแสดงการ์ด 2 คอลัมน์) · ออกแบบการ์ดรายละเอียดเหตุการณ์ใหม่ + หัวกลุ่มวันแบบปฏิทิน
   v8: • ใบรายงาน: ดูตัวอย่าง → ระบบตรวจความครบถ้วน → ติ๊กยืนยัน → ออกใบรายงาน (PDF / JPEG / พิมพ์) · ปรับสีสันใบรายงาน
       • ตรวจซ้ำก่อนออกไฟล์ว่าข้อมูลยังตรงกับตัวอย่างที่ยืนยัน · รายละเอียดยาวเกินหน้าแบ่งต่อหน้าถัดไปอัตโนมัติ
@@ -52,6 +54,7 @@
   .toast { transition: opacity .3s ease, transform .3s ease; }
   .card-in { animation: cardIn .35s ease both; }
   @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .spinner { width: 1rem; height: 1rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 9999px; animation: spin .7s linear infinite; display: inline-block; }
@@ -154,7 +157,7 @@
     <div id="spBarWrap" class="mt-8 px-10"><div id="spBar" class="sp-bar"><i></i></div></div>
     <p id="spHint" class="sp-hint text-xs text-white/60 mt-4">กำลังเข้าสู่ระบบ... แตะเพื่อเข้าทันที</p>
   </div>
-  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v9</p>
+  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v10</p>
 </div>
 
 <!-- ================= พื้นหลังเคลื่อนไหว ================= -->
@@ -220,12 +223,15 @@
       <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
       <input id="searchInput" type="search" placeholder="ค้นหาจากหัวข้อ รายละเอียด ผู้แจ้ง หรือหมายเหตุ..." class="inp pl-10">
     </div>
-    <div id="rangeChips" class="flex flex-wrap gap-2"></div>
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
-      <select id="filterMonth" class="inp text-sm"></select>
-      <select id="filterTopic" class="inp text-sm"></select>
-      <select id="filterFloor" class="inp text-sm"></select>
-      <select id="filterReporter" class="inp text-sm"></select>
+    <!-- ช่วงวัน + ตัวกรอง อยู่แถวเดียวกันบนจอกว้าง (≥1280px) จอเล็กจะตัดลงบรรทัดใหม่อัตโนมัติ -->
+    <div class="flex flex-col xl:flex-row xl:items-center gap-2">
+      <div id="rangeChips" class="flex flex-wrap gap-2 shrink-0"></div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1 min-w-0">
+        <select id="filterMonth" class="inp text-sm"></select>
+        <select id="filterTopic" class="inp text-sm"></select>
+        <select id="filterFloor" class="inp text-sm"></select>
+        <select id="filterReporter" class="inp text-sm"></select>
+      </div>
     </div>
   </section>
 
@@ -245,8 +251,26 @@
   </section>
   <p id="pullInfo" class="-mt-3 text-xs text-slate-500 dark:text-slate-400"></p>
 
-  <!-- รายการจัดกลุ่มตามวัน (เหมือนสมุดบันทึก) -->
-  <section id="entryList" class="space-y-3"></section>
+  <!-- ตารางประวัติบันทึกเหตุการณ์ (จอเล็กแสดงเป็นการ์ด) -->
+  <section id="listPanel" class="glass rounded-3xl border border-white/70 dark:border-slate-700 shadow-sm overflow-hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-slate-200/70 dark:border-slate-700">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-11 h-11 shrink-0 rounded-2xl grid place-items-center text-xl text-white bg-gradient-to-br from-slate-600 to-slate-800 shadow-md">📋</div>
+        <div class="min-w-0">
+          <h2 class="font-display font-semibold text-lg leading-tight">ประวัติบันทึกเหตุการณ์แบบละเอียด</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">ค้นหา • เรียงลำดับ • ดูรายละเอียด • แก้ไข • ลบ</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnSort" class="inp !w-auto text-sm py-2 px-3 whitespace-nowrap" title="สลับการเรียงตามวันที่"></button>
+        <select id="pageSize" class="inp !w-auto text-sm py-2">
+          <option value="25">25 รายการ</option><option value="50">50 รายการ</option><option value="100">100 รายการ</option><option value="0">ทั้งหมด</option>
+        </select>
+      </div>
+    </div>
+    <div id="entryList"></div>
+    <div id="pager" class="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-t border-slate-200/70 dark:border-slate-700 text-sm"></div>
+  </section>
 
   <section id="emptyState" class="hidden glass text-center py-16 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600">
     <div class="text-5xl mb-3">📒</div>
@@ -255,7 +279,7 @@
   </section>
 </main>
 
-<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v9 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
+<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v10 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
 </div>
 
 <!-- ================= Modal: เพิ่ม/แก้ไขบันทึก (ช่องตรงกับหัวคอลัมน์ในชีต) ================= -->
@@ -440,13 +464,13 @@
 
 <script>
 /* =====================================================================
-   SBK บันทึกเหตุการณ์ประจำวัน v9 — Single File App
+   SBK บันทึกเหตุการณ์ประจำวัน v10 — Single File App
    โครงสร้าง: ค่าคงที่ → State → Storage → Utilities → Sheets Sync → Render → Modal → ฟอร์ม
              → Export/Import → Theme → PWA → Splash/พักหน้าจอ → พื้นหลังเคลื่อนไหว → Event → Init
    ===================================================================== */
 
 /* ---------- 1) ค่าคงที่ ---------- */
-const APP_VERSION  = 'v9';
+const APP_VERSION  = 'v10';
 // เวอร์ชัน Code.gs ที่ต้องมี: เขียนข้อมูล (9 คอลัมน์) ได้ตั้งแต่ v5, ดึงข้อมูลกลับจากชีตได้ตั้งแต่ v6
 const BACKEND_MIN_WRITE = 5, BACKEND_MIN_PULL = 6;
 // Web App URL ของ Code.gs — ฝังถาวร ทุกเครื่องที่เปิดแอปจะส่ง/ดึงข้อมูลจากชีตเดียวกัน
@@ -929,87 +953,129 @@ function topicChip(e, big = false) {
   return `<span class="inline-flex items-center gap-1 rounded-full font-semibold ${big ? 'px-3 py-1 text-sm' : 'px-2.5 py-0.5 text-xs'}" style="background:${t.color}1a; color:${t.color}; box-shadow: inset 0 0 0 1px ${t.color}40">${t.icon} ${esc(custom ? 'อื่นๆ' : t.label)}</span>`;
 }
 const TH_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-// การ์ดเหตุการณ์ (v9): หัวการ์ด = ไอคอน+หัวข้อ+เวลาเด่น · แถบข้อมูลย่อย (ชั้น/หมายเหตุ) · รายละเอียดตัวใหญ่อ่านง่าย · ท้ายการ์ด = ผู้แจ้ง+ปุ่ม
-// สีของการ์ดผูกกับหัวข้อเหตุการณ์ สีป้ายชั้นผูกกับชั้น — กวาดตาแยกประเภทได้ทันทีโดยไม่ต้องอ่าน
-function renderCard(e) {
-  const t = topicOf(e.title), custom = t === OTHER_TOPIC, open = expanded.has(e.id);
-  const fc = floorColorOf(floorLabel(e.floor));
-  const long = e.content.length > 220 || (e.content.match(/\n/g) || []).length > 3;
-  return `
-    <article data-id="${e.id}" class="card-in group relative flex flex-col overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur border border-slate-200/80 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition cursor-pointer">
-      <div class="h-1.5" style="background:linear-gradient(90deg, ${t.color}, ${t.color}55)"></div>
-      <div class="flex items-start gap-3 px-4 pt-3">
-        <div class="w-12 h-12 shrink-0 rounded-2xl grid place-items-center text-2xl" style="background:${t.color}1c; box-shadow: inset 0 0 0 1px ${t.color}45">${t.icon}</div>
-        <div class="min-w-0 flex-1 pt-0.5">
-          <p class="text-[11px] font-semibold tracking-wide" style="color:${t.color}">${custom ? '📦 อื่นๆ (ระบุเอง)' : 'หัวข้อเหตุการณ์'}</p>
-          <h3 class="font-display font-semibold text-[15.5px] leading-snug break-words text-slate-800 dark:text-slate-100">${esc(e.title || '(ไม่มีหัวข้อ)')}</h3>
-        </div>
-        <div class="shrink-0 text-center rounded-xl px-2.5 py-1.5" style="background:${t.color}14">
-          <div class="font-display font-bold text-xl leading-none tabular-nums" style="color:${t.color}">${fmtClock(e.datetime).replace(':', '.')}</div>
-          <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">น.</div>
-        </div>
+const fmtShortTh = (d) => `${d.getDate()} ${TH_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear() + 543}`;
+// ---- ตารางประวัติ: เรียงลำดับ + แบ่งหน้า (จำค่าที่เลือกไว้ในเครื่อง) ----
+const LISTPREF_KEY = 'workJournal.listPref';
+let listSort = 'desc', pageSize = 25, page = 1, lastFilterSig = '';
+(() => { const p = readJson(LISTPREF_KEY, {}) || {}; if (p.sort === 'asc') listSort = 'asc'; if ([0, 25, 50, 100].includes(p.size)) pageSize = p.size; })();
+const saveListPref = () => writeJson(LISTPREF_KEY, { sort: listSort, size: pageSize });
+
+const floorPill = (f) => `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-white whitespace-nowrap" style="background:${floorColorOf(floorLabel(f))}">${esc(f ? floorLabel(f) : 'ไม่ระบุ')}</span>`;
+const syncPill = (e) => e.sync === 'ok'
+  ? '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">☁️ ซิงก์แล้ว</span>'
+  : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">⏳ รอซิงก์</span>';
+const avatar = (n, size = 'w-8 h-8 text-xs') => `<span class="${size} shrink-0 rounded-full grid place-items-center font-bold text-white bg-gradient-to-br from-indigo-500 to-purple-600 shadow">${esc(initials(n))}</span>`;
+const actBtns = () => `
+  <div class="flex items-center justify-end gap-1.5">
+    <button data-action="view" title="ดูรายละเอียด" class="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm">📄</button>
+    <button data-action="edit" title="แก้ไข" class="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 shadow-sm">✏️</button>
+    <button data-action="delete" title="ลบ" class="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-900/30 shadow-sm">🗑️</button>
+  </div>`;
+function topicCell(e) {
+  const t = topicOf(e.title), custom = t === OTHER_TOPIC;
+  return `<div class="flex items-center gap-2.5 min-w-0">
+      <span class="w-9 h-9 shrink-0 rounded-xl grid place-items-center text-lg" style="background:${t.color}1c; box-shadow: inset 0 0 0 1px ${t.color}45">${t.icon}</span>
+      <div class="min-w-0"><p class="font-semibold text-[13.5px] leading-snug break-words" style="color:${t.color}">${esc(e.title || '(ไม่มีหัวข้อ)')}</p>${custom ? '<p class="text-[11px] text-slate-400">อื่นๆ (ระบุเอง)</p>' : ''}</div>
+    </div>`;
+}
+// แถวตาราง (จอ ≥768px): คอลัมน์ตามหัวคอลัมน์ในชีต — แตะแถวเพื่อดูรายละเอียดเต็ม
+function renderRow(e, no) {
+  const d = new Date(e.datetime), t = topicOf(e.title), open = expanded.has(e.id);
+  const long = e.content.length > 140 || (e.content.match(/\n/g) || []).length > 1;
+  return `<tr data-id="${e.id}" class="group border-b border-slate-100 dark:border-slate-700/60 hover:bg-indigo-50/60 dark:hover:bg-slate-700/30 cursor-pointer transition">
+      <td class="pl-4 pr-2 py-3 align-top text-slate-400 tabular-nums border-l-4" style="border-left-color:${t.color}">${no}</td>
+      <td class="px-3 py-3 align-top whitespace-nowrap"><p class="font-semibold text-[13.5px]">${fmtShortTh(d)}</p><p class="text-xs text-slate-500 dark:text-slate-400">${sheetTime(d)} · ${fmtWeekday(d)}</p></td>
+      <td class="px-3 py-3 align-top">${floorPill(e.floor)}</td>
+      <td class="px-3 py-3 align-top">${topicCell(e)}</td>
+      <td class="px-3 py-3 align-top">
+        <p class="text-[13.5px] leading-6 text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words ${open ? '' : 'clamp-2'}">${esc(e.content)}</p>
+        ${long ? `<button data-action="toggle" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">${open ? '▲ ย่อ' : '▼ อ่านต่อ'}</button>` : ''}
+      </td>
+      <td class="px-3 py-3 align-top"><div class="flex items-center gap-2 min-w-0">${avatar(e.reporter)}<span class="text-[13px] leading-snug">${esc(e.reporter || '-')}</span></div></td>
+      <td class="px-3 py-3 align-top">${e.note ? `<span class="inline-block px-2.5 py-0.5 rounded-lg text-xs bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 border border-amber-200 dark:border-amber-800">${esc(e.note)}</span>` : '<span class="text-slate-300 dark:text-slate-600">—</span>'}</td>
+      <td class="px-3 py-3 align-top">${syncPill(e)}</td>
+      <td class="pl-2 pr-4 py-2.5 align-top">${actBtns()}</td>
+    </tr>`;
+}
+// การ์ด (จอ <768px): ข้อมูลชุดเดียวกับตาราง จัดเรียงแนวตั้งให้อ่านบนมือถือได้สบาย
+function renderMobileCard(e, no) {
+  const d = new Date(e.datetime), t = topicOf(e.title), open = expanded.has(e.id);
+  const long = e.content.length > 120 || (e.content.match(/\n/g) || []).length > 2;
+  return `<article data-id="${e.id}" class="p-4 border-b border-slate-100 dark:border-slate-700/60 border-l-4 cursor-pointer active:bg-indigo-50/60 dark:active:bg-slate-700/30" style="border-left-color:${t.color}">
+      <div class="flex items-start justify-between gap-3">
+        ${topicCell(e)}
+        <div class="text-right shrink-0"><p class="font-display font-bold text-lg leading-none tabular-nums" style="color:${t.color}">${fmtClock(d).replace(':', '.')}</p><p class="text-[11px] text-slate-500 mt-1">${fmtShortTh(d)}</p></div>
       </div>
-      <div class="flex flex-wrap items-center gap-1.5 px-4 mt-2.5">
-        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold text-white" style="background:${fc}">🏢 ${esc(floorLabel(e.floor))}</span>
-        ${e.note ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 border border-amber-200 dark:border-amber-800">📝 ${esc(e.note)}</span>` : ''}
-      </div>
-      <div class="flex-1 px-4 pt-2.5 pb-3">
-        <p class="text-[14.5px] leading-7 text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words ${open ? '' : 'clamp-4'}">${esc(e.content)}</p>
-        ${long ? `<button data-action="toggle" class="mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">${open ? '▲ ย่อข้อความ' : '▼ อ่านต่อ'}</button>` : ''}
-      </div>
-      <div class="flex items-center gap-2 px-4 py-2 border-t border-slate-100 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-900/40 text-xs">
-        <span class="w-7 h-7 shrink-0 rounded-full grid place-items-center text-[11px] font-bold text-white bg-gradient-to-br from-indigo-500 to-purple-600 shadow">${esc(initials(e.reporter))}</span>
-        <span class="min-w-0"><span class="block text-[10px] text-slate-400 leading-tight">ผู้แจ้ง</span><span class="block font-medium text-slate-700 dark:text-slate-200 truncate">${esc(e.reporter || '-')}</span></span>
-        <span class="ml-1">${syncBadge(e)}</span>
-        <span class="ml-auto flex gap-1">
-          <button data-action="edit" title="แก้ไข" class="h-8 px-2.5 rounded-lg border border-transparent hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-600 dark:text-slate-300">✏️ <span class="hidden sm:inline">แก้ไข</span></button>
-          <button data-action="delete" title="ลบ" class="h-8 px-2.5 rounded-lg border border-transparent hover:border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-900/30 text-rose-600">🗑️ <span class="hidden sm:inline">ลบ</span></button>
-        </span>
-      </div>
+      <div class="flex flex-wrap items-center gap-1.5 mt-2">${floorPill(e.floor)}${e.note ? `<span class="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">📝 ${esc(e.note)}</span>` : ''}${syncPill(e)}</div>
+      <p class="mt-2 text-[14px] leading-6 text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words ${open ? '' : 'clamp-3'}">${esc(e.content)}</p>
+      ${long ? `<button data-action="toggle" class="text-xs font-semibold text-indigo-600 dark:text-indigo-300">${open ? '▲ ย่อ' : '▼ อ่านต่อ'}</button>` : ''}
+      <div class="flex items-center gap-2 mt-3">${avatar(e.reporter, 'w-7 h-7 text-[11px]')}<span class="text-xs text-slate-600 dark:text-slate-300 flex-1 min-w-0 truncate">${esc(e.reporter || '-')}</span>${actBtns()}</div>
     </article>`;
 }
-// หัวกลุ่มวัน: ปฏิทินย่อ + วันที่เต็ม + จำนวน + จุดสีหัวข้อของวันนั้น
-function renderDayHeader(g) {
-  const topics = countBy(g.items, e => topicOf(e.title).label);
-  return `
-    <div class="flex flex-wrap items-center gap-3 pt-4 pb-1">
-      <div class="flex items-center gap-3 rounded-2xl glass border border-white/70 dark:border-slate-700 pl-2 pr-4 py-2 shadow-sm">
-        <div class="w-12 h-12 rounded-xl text-white grid place-items-center leading-none bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md">
-          <div class="text-center"><div class="font-display font-bold text-xl">${g.d.getDate()}</div><div class="text-[10px] opacity-90">${TH_MONTHS_SHORT[g.d.getMonth()]}</div></div>
-        </div>
-        <div>
-          <p class="font-display font-semibold text-[15px] leading-tight">${fmtDate(g.d)} ${dayBadge(g.d)}</p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2">
-            <b class="text-indigo-600 dark:text-indigo-300">${g.items.length.toLocaleString('th-TH')} เหตุการณ์</b>
-            ${topics.map(([k, n]) => `<span title="${esc(k)}">${topicOf(k).icon}${n}</span>`).join('')}
-          </p>
-        </div>
-      </div>
-      <div class="flex-1 h-px bg-gradient-to-r from-indigo-300/70 to-transparent dark:from-indigo-700/70"></div>
-    </div>`;
+function renderPager(total) {
+  const pages = pageSize ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+  const from = total ? (pageSize ? (page - 1) * pageSize + 1 : 1) : 0, to = pageSize ? Math.min(total, page * pageSize) : total;
+  const btn = (p, label, dis, cur) => `<button data-page="${p}" ${dis ? 'disabled' : ''} class="min-w-9 h-9 px-3 rounded-xl border transition ${cur ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700'} ${dis ? 'opacity-40 cursor-not-allowed' : ''}">${label}</button>`;
+  // แสดงเลขหน้ารอบหน้าปัจจุบัน + หน้าแรก/หน้าสุดท้าย
+  const nums = [...new Set([1, page - 1, page, page + 1, pages])].filter(p => p >= 1 && p <= pages).sort((a, b) => a - b);
+  let h = '', prev = 0;
+  nums.forEach(p => { if (p - prev > 1) h += '<span class="px-1 text-slate-400">…</span>'; h += btn(p, p, false, p === page); prev = p; });
+  $('pager').innerHTML = `<p class="text-slate-500 dark:text-slate-400">แสดง <b class="text-slate-700 dark:text-slate-200">${from.toLocaleString('th-TH')}–${to.toLocaleString('th-TH')}</b> จาก ${total.toLocaleString('th-TH')} เหตุการณ์</p>
+    ${pages > 1 ? `<div class="flex flex-wrap items-center gap-1.5">${btn(page - 1, '‹ ก่อนหน้า', page <= 1)}${h}${btn(page + 1, 'ถัดไป ›', page >= pages)}</div>` : ''}`;
 }
 function renderList() {
   renderTopicSummary();
-  const list = getFiltered();
+  let list = getFiltered();
+  if (listSort === 'asc') list = list.slice().reverse(); // getFiltered เรียงใหม่→เก่าอยู่แล้ว
   const hasFilter = searchText.trim() || filterRange || filterMonth || filterReporter || filterFloor || filterTopic;
   const days = new Set(list.map(e => dayKey(new Date(e.datetime)))).size;
-  $('resultInfo').textContent = entries.length ? `แสดง ${list.length.toLocaleString('th-TH')} เหตุการณ์ ใน ${days.toLocaleString('th-TH')} วัน (ทั้งหมด ${entries.length.toLocaleString('th-TH')})` : '';
+  $('resultInfo').textContent = entries.length ? `พบ ${list.length.toLocaleString('th-TH')} เหตุการณ์ ใน ${days.toLocaleString('th-TH')} วัน (ทั้งหมด ${entries.length.toLocaleString('th-TH')})` : '';
   $('emptyState').classList.toggle('hidden', list.length > 0);
+  $('listPanel').classList.toggle('hidden', !list.length);
+  $('btnSort').textContent = listSort === 'desc' ? '⬇️ ใหม่ → เก่า' : '⬆️ เก่า → ใหม่';
+  $('pageSize').value = String(pageSize);
   if (!list.length) {
     const filtered = hasFilter && entries.length;
     $('emptyTitle').textContent = filtered ? 'ไม่พบเหตุการณ์ที่ตรงเงื่อนไข' : 'ยังไม่มีบันทึกเหตุการณ์';
     $('emptyDesc').textContent = filtered ? 'ลองเปลี่ยนช่วงวันที่ คำค้นหา หรือล้างตัวกรอง' : 'กดปุ่ม "บันทึกเหตุการณ์" หรือ "ดึงข้อมูลล่าสุด" จาก Google Sheets';
+    $('entryList').innerHTML = ''; $('pager').innerHTML = '';
+    return;
   }
-  // จัดกลุ่มตามวัน (รายการเรียงใหม่→เก่าแล้ว จึงไล่ต่อกันได้เลย)
-  const groups = [];
-  list.forEach(e => {
+  // เปลี่ยนตัวกรอง/การเรียง → กลับไปหน้าแรก, หน้าเกินจำนวนจริง (เช่น หลังลบ) → ปรับให้อยู่ในช่วง
+  const sig = [searchText, filterRange, filterMonth, filterReporter, filterFloor, filterTopic, listSort, pageSize].join('|');
+  if (sig !== lastFilterSig) { page = 1; lastFilterSig = sig; }
+  const pages = pageSize ? Math.max(1, Math.ceil(list.length / pageSize)) : 1;
+  page = Math.min(Math.max(1, page), pages);
+  const start = pageSize ? (page - 1) * pageSize : 0;
+  const pageList = pageSize ? list.slice(start, start + pageSize) : list;
+  // จำนวนเหตุการณ์ต่อวัน (นับจากผลกรองทั้งหมด ไม่ใช่เฉพาะหน้านี้) ใช้บนแถบคั่นวัน
+  const perDay = {};
+  list.forEach(e => { const k = dayKey(new Date(e.datetime)); perDay[k] = (perDay[k] || 0) + 1; });
+  let rows = '', cards = '', lastK = '';
+  pageList.forEach((e, i) => {
     const d = new Date(e.datetime), k = dayKey(d);
-    if (!groups.length || groups[groups.length - 1].k !== k) groups.push({ k, d, items: [] });
-    groups[groups.length - 1].items.push(e);
+    if (k !== lastK) {
+      lastK = k;
+      const label = `📅 ${fmtDate(d)} ${dayBadge(d)} <span class="ml-1 text-xs font-medium text-indigo-600 dark:text-indigo-300">${perDay[k]} เหตุการณ์</span>`;
+      rows += `<tr class="bg-gradient-to-r from-indigo-50 to-transparent dark:from-indigo-900/30"><td colspan="9" class="px-4 py-2 font-display font-semibold text-[13.5px] text-slate-700 dark:text-slate-200">${label}</td></tr>`;
+      cards += `<div class="px-4 py-2 bg-gradient-to-r from-indigo-50 to-transparent dark:from-indigo-900/30 font-display font-semibold text-[13px]">${label}</div>`;
+    }
+    rows += renderRow(e, start + i + 1);
+    cards += renderMobileCard(e, start + i + 1);
   });
-  // จอกว้าง (≥1280px) แสดงการ์ด 2 คอลัมน์ — ใช้พื้นที่ที่ขยายเต็มขึ้น อ่านได้มากขึ้นโดยไม่ต้องเลื่อน
-  $('entryList').innerHTML = groups.map(g => `${renderDayHeader(g)}
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">${g.items.map(renderCard).join('')}</div>`).join('');
+  const th = (txt, cls = '') => `<th class="px-3 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap ${cls}">${txt}</th>`;
+  $('entryList').innerHTML = `
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[1080px] text-sm">
+        <thead class="bg-white/60 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700">
+          <tr>${th('#', 'pl-5 w-12')}<th class="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap w-36"><button data-sort="1" class="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-indigo-600">วันที่ / เวลา ${listSort === 'desc' ? '▼' : '▲'}</button></th>
+            ${th('ชั้น', 'w-28')}${th('หัวข้อเหตุการณ์', 'w-56')}${th('เหตุการณ์ประจำวัน (รายละเอียด)')}${th('ผู้แจ้ง', 'w-48')}${th('หมายเหตุ', 'w-40')}${th('สถานะ', 'w-28')}${th('จัดการ', 'text-right pr-5 w-36')}</tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="md:hidden">${cards}</div>`;
+  renderPager(list.length);
 }
 
 /* ---------- 8) Modal ---------- */
@@ -1940,16 +2006,22 @@ function handleEvents() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastPull > 180000) syncAndPull(true); });
 
   $('entryList').onclick = (ev) => {
+    if (ev.target.closest('[data-sort]')) { listSort = listSort === 'desc' ? 'asc' : 'desc'; saveListPref(); return renderList(); }
     const card = ev.target.closest('[data-id]');
     if (!card) return;
     const btn = ev.target.closest('button[data-action]');
     const id = card.dataset.id;
-    if (!btn) return openDetail(id); // แตะที่การ์ด = ดูรายละเอียด
+    if (!btn) return openDetail(id); // แตะที่แถว/การ์ด = ดูรายละเอียด
     ev.stopPropagation();
-    if (btn.dataset.action === 'edit') openForm(id);
+    if (btn.dataset.action === 'view') openDetail(id);
+    else if (btn.dataset.action === 'edit') openForm(id);
     else if (btn.dataset.action === 'delete') askDelete(id);
     else { expanded.has(id) ? expanded.delete(id) : expanded.add(id); renderList(); }
   };
+  $('btnSort').onclick = () => { listSort = listSort === 'desc' ? 'asc' : 'desc'; saveListPref(); renderList(); };
+  $('pageSize').onchange = (e) => { pageSize = Number(e.target.value) || 0; saveListPref(); renderList(); };
+  // เปลี่ยนหน้าแล้วเลื่อนกลับหัวตาราง ให้เห็นรายการแรกของหน้าใหม่
+  $('pager').onclick = (ev) => { const b = ev.target.closest('[data-page]'); if (!b || b.disabled) return; page = Number(b.dataset.page); renderList(); $('listPanel').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 }
 
 /* ---------- 18) Init ---------- */
