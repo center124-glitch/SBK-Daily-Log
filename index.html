@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SBK บันทึกเหตุการณ์ประจำวัน v10 | Daily Log</title>
+<title>SBK บันทึกเหตุการณ์ประจำวัน v11 | Daily Log</title>
 <!--
-  SBK_Daily_Log_v10.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  SBK_Daily_Log_v11.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  v11: • ใบรายงาน: นำช่องลงนาม (ผู้จัดทำ/ผู้ตรวจสอบ/ผู้อนุมัติ) ออก · ตารางรายละเอียดออกแบบใหม่ (เลขลำดับวงกลมสี, ป้ายชั้น/หัวข้อ,
+         ผู้แจ้งมีอักษรย่อ, หมายเหตุเป็นป้าย, แถบคั่นวันแบบปฏิทิน) · ท้ายรายงานแสดง "สิ้นสุดรายงาน" + เวลาข้อมูล
   v10: • ช่วงวัน + ตัวกรองอยู่แถวเดียวกัน · รายการแสดงเป็นตาราง "ประวัติบันทึกเหตุการณ์แบบละเอียด" (คอลัมน์ตามการบันทึก)
          เรียงวันที่ได้ · แบ่งหน้า 25/50/100/ทั้งหมด · แถบคั่นวัน · ปุ่มดู/แก้ไข/ลบ · จอมือถือแสดงเป็นการ์ด
   v9: • ขยายพื้นที่แสดงผลเป็น 1500px (จอกว้างแสดงการ์ด 2 คอลัมน์) · ออกแบบการ์ดรายละเอียดเหตุการณ์ใหม่ + หัวกลุ่มวันแบบปฏิทิน
@@ -157,7 +159,7 @@
     <div id="spBarWrap" class="mt-8 px-10"><div id="spBar" class="sp-bar"><i></i></div></div>
     <p id="spHint" class="sp-hint text-xs text-white/60 mt-4">กำลังเข้าสู่ระบบ... แตะเพื่อเข้าทันที</p>
   </div>
-  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v10</p>
+  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v11</p>
 </div>
 
 <!-- ================= พื้นหลังเคลื่อนไหว ================= -->
@@ -279,7 +281,7 @@
   </section>
 </main>
 
-<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v10 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
+<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v11 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
 </div>
 
 <!-- ================= Modal: เพิ่ม/แก้ไขบันทึก (ช่องตรงกับหัวคอลัมน์ในชีต) ================= -->
@@ -464,13 +466,13 @@
 
 <script>
 /* =====================================================================
-   SBK บันทึกเหตุการณ์ประจำวัน v10 — Single File App
+   SBK บันทึกเหตุการณ์ประจำวัน v11 — Single File App
    โครงสร้าง: ค่าคงที่ → State → Storage → Utilities → Sheets Sync → Render → Modal → ฟอร์ม
              → Export/Import → Theme → PWA → Splash/พักหน้าจอ → พื้นหลังเคลื่อนไหว → Event → Init
    ===================================================================== */
 
 /* ---------- 1) ค่าคงที่ ---------- */
-const APP_VERSION  = 'v10';
+const APP_VERSION  = 'v11';
 // เวอร์ชัน Code.gs ที่ต้องมี: เขียนข้อมูล (9 คอลัมน์) ได้ตั้งแต่ v5, ดึงข้อมูลกลับจากชีตได้ตั้งแต่ v6
 const BACKEND_MIN_WRITE = 5, BACKEND_MIN_PULL = 6;
 // Web App URL ของ Code.gs — ฝังถาวร ทุกเครื่องที่เปิดแอปจะส่ง/ดึงข้อมูลจากชีตเดียวกัน
@@ -1519,28 +1521,58 @@ function rptInsights(m) {
   if (m.pending) out.push(`<span style="color:#b45309;">มี ${m.pending} รายการที่ยังไม่ได้ซิงก์ขึ้น Google Sheets ณ เวลาที่ออกรายงาน</span>`);
   return out;
 }
+// ---- ตารางรายละเอียดในใบรายงาน (v11): เส้นแนวนอนบางๆ แทนตารางตาราง, เลขลำดับในวงกลมสีหัวข้อ, ป้ายสีชั้น/หัวข้อ, ผู้แจ้งมีอักษรย่อ ----
+const RT = {
+  th: `background:${C.navy}; color:#fff; padding:6px 8px 8px; font-weight:700; font-size:11.5px; line-height:normal; text-align:left; white-space:nowrap; vertical-align:middle;`,
+  td: `padding:7px 8px 8px; font-size:11.5px; line-height:19px; vertical-align:top; border-bottom:1px solid #e2e8f0;`
+};
 function rptRow(e, i, showDate, contentOverride, cont) {
-  const d = new Date(e.datetime), t = topicOf(e.title), zebra = i % 2 === 0 ? 'background:#f5f7ff;' : '';
+  const d = new Date(e.datetime), t = topicOf(e.title), custom = t === OTHER_TOPIC;
+  const bg = i % 2 === 0 ? 'background:#f8faff;' : 'background:#fff;';
   const content = contentOverride != null ? contentOverride : e.content;
-  return `<tr style="${zebra}">
-    <td style="${RS.td} text-align:center; border-left:4px solid ${t.color};">${cont ? '' : i}</td>
-    ${showDate ? `<td style="${RS.td} white-space:nowrap; text-align:center;">${cont ? '' : `${sheetDate(d)}<div style="font-size:9.5px; line-height:14px; color:${C.muted};">${fmtWeekday(d)}</div>`}</td>` : ''}
-    <td style="${RS.td} white-space:nowrap; text-align:center;">${cont ? '' : sheetTime(d)}</td>
-    <td style="${RS.td} text-align:center;">${cont ? '' : esc(e.floor || '-')}</td>
-    <td style="${RS.td}">${cont ? `<span style="color:${C.muted};">(ต่อ)</span>` : `<span style="display:inline-block; padding:0 7px; border-radius:999px; background:${t.color}1f; color:${t.color}; font-weight:700; font-size:10.5px; line-height:17px;">${t.icon} ${esc(t === OTHER_TOPIC ? 'อื่นๆ' : t.label)}</span>${t === OTHER_TOPIC ? `<div style="font-weight:700;">${esc(e.title)}</div>` : ''}`}</td>
-    <td style="${RS.td} white-space:pre-wrap; word-break:break-word;">${esc(content)}</td>
-    <td style="${RS.td}">${cont ? '' : esc(e.reporter || '-')}</td>
-    <td style="${RS.td} font-size:10.5px;">${cont ? '' : esc(e.note || '')}</td></tr>`;
+  const fc = floorColorOf(floorLabel(e.floor));
+  // ป้ายแบบ inline-flex + line-height:normal — html2canvas วางข้อความไทยตรงกลางได้ถูกต้อง (line-height คงที่ทำให้ตัวอักษรเลื่อนลงจนขาด)
+  // ป้ายเป็นกล่องระดับบล็อก (div ใน flex) — html2canvas วาดพื้นหลังของกล่อง inline ในเซลล์ตารางเลื่อนขึ้นไม่ตรงข้อความ
+  const pill = (txt, color, solid, center) => `<div style="display:flex; justify-content:${center ? 'center' : 'flex-start'};"><div style="padding:2px 9px 3px; border-radius:999px; font-size:10.5px; line-height:16px; font-weight:700; white-space:nowrap; ${solid ? `background:${color}; color:#fff;` : `background:${color}1c; color:${color}; border:1px solid ${color}40;`}">${txt}</div></div>`;
+  return `<tr style="${bg}">
+    <td style="${RT.td} text-align:center; border-left:4px solid ${t.color};">${cont ? '' : `<div style="display:flex; justify-content:center;"><div style="min-width:24px; box-sizing:border-box; padding:3px 6px 4px; border-radius:999px; background:${t.color}; color:#fff; font-weight:700; font-size:11px; line-height:17px; text-align:center;">${i}</div></div>`}</td>
+    <td style="${RT.td} white-space:nowrap;">${cont ? '' : (showDate
+      ? `<div style="font-weight:700; color:${C.ink};">${sheetDate(d)}</div><div style="font-size:10.5px; color:${C.muted};">${fmtWeekday(d)} · <b style="color:${t.color};">${sheetTime(d)}</b></div>`
+      : `<div style="font-family:Prompt,Sarabun,sans-serif; font-weight:700; font-size:14px; line-height:20px; color:${t.color};">${sheetTime(d)}</div>`)}</td>
+    <td style="${RT.td} text-align:center;">${cont ? '' : pill(esc(e.floor ? floorLabel(e.floor) : 'ไม่ระบุ'), fc, true, true)}</td>
+    <td style="${RT.td}">${cont ? `<span style="color:${C.muted}; font-style:italic;">(ต่อจากหน้าก่อน)</span>` : `${pill(`${t.icon} ${esc(custom ? 'อื่นๆ' : t.label)}`, t.color, false)}${custom ? `<div style="font-weight:700; margin-top:3px;">${esc(e.title)}</div>` : ''}`}</td>
+    <td style="${RT.td} white-space:pre-wrap; word-break:break-word; color:#1f2937;">${esc(content)}</td>
+    <td style="${RT.td}">${cont ? '' : `<div style="display:flex; align-items:flex-start; gap:6px;"><div style="flex-shrink:0; width:22px; box-sizing:border-box; padding:2px 0 3px; border-radius:999px; font-size:10px; line-height:17px; text-align:center; font-weight:700; color:#fff; background:linear-gradient(135deg, ${C.indigo}, ${C.violet});">${esc(initials(e.reporter))}</div><span>${esc(e.reporter || '-')}</span></div>`}</td>
+    <td style="${RT.td}">${cont || !e.note ? (cont ? '' : `<span style="color:#cbd5e1;">—</span>`) : `<div style="padding:2px 8px 3px; border-radius:8px; background:#fffbeb; border:1px solid #fcd34d; color:#92400e; font-size:10.5px; line-height:16px;">${esc(e.note)}</div>`}</td></tr>`;
 }
 function rptTableHead(showDate) {
-  return `<thead><tr><th style="${RS.th} width:40px;">ลำดับ</th>${showDate ? `<th style="${RS.th} width:78px;">ว/ด/ป</th>` : ''}<th style="${RS.th} width:62px;">เวลา</th><th style="${RS.th} width:66px;">ชั้น</th>
-    <th style="${RS.th} width:165px;">หัวข้อเหตุการณ์</th><th style="${RS.th}">เหตุการณ์ประจำวัน (รายละเอียด)</th><th style="${RS.th} width:140px;">ผู้แจ้ง</th><th style="${RS.th} width:105px;">หมายเหตุ</th></tr></thead>`;
+  const r = () => ''; // มุมโค้งทำที่กรอบครอบตาราง (border-collapse:separate ทำให้ html2canvas วาดข้อความในเซลล์เลื่อนลง)
+  return `<thead><tr>
+    <th style="${RT.th} ${r('first')} width:44px; text-align:center;">ลำดับ</th>
+    <th style="${RT.th} width:${showDate ? 112 : 70}px;">${showDate ? 'ว/ด/ป · เวลา' : 'เวลา'}</th>
+    <th style="${RT.th} width:84px; text-align:center;">ชั้น</th>
+    <th style="${RT.th} width:178px;">หัวข้อเหตุการณ์</th>
+    <th style="${RT.th}">เหตุการณ์ประจำวัน (รายละเอียด)</th>
+    <th style="${RT.th} width:150px;">ผู้แจ้ง</th>
+    <th style="${RT.th} ${r('last')} width:112px;">หมายเหตุ</th></tr></thead>`;
 }
-const dayRow = (d, n, cols) => `<tr><td colspan="${cols}" style="border:1px solid #c7d2fe; background:linear-gradient(90deg,#e0e7ff,#f5f3ff); padding:3px 8px; font-size:11.5px; line-height:18px; font-weight:700; color:${C.navy};">📅 ${fmtDate(d)} <span style="font-weight:500; color:${C.indigo};">· ${n} เหตุการณ์</span></td></tr>`;
-function rptSign() {
-  const s = (role, color) => `<div style="flex:1; text-align:center; font-size:12px; line-height:24px; border:1px solid ${color}55; background:${color}0d; border-radius:10px; padding:8px 6px;">
-      ลงชื่อ ...................................................<br>( ................................................... )<br><b style="color:${color};">${role}</b><br>วันที่ ........ / ........ / ............</div>`;
-  return `<div style="display:flex; gap:12px; margin-top:12px;">${s('ผู้จัดทำรายงาน', C.indigo)}${s('ผู้ตรวจสอบ', C.violet)}${s('ผู้อนุมัติ', C.pink)}</div>`;
+// แถบคั่นวัน: ปฏิทินย่อ + วันที่เต็ม + จำนวน + ไอคอนหัวข้อของวันนั้น
+function dayRow(d, items, cols) {
+  const topics = countBy(items, e => topicOf(e.title).label).map(([k, n]) => `<span style="margin-left:6px; color:#334155;">${topicOf(k).icon}${n}</span>`).join('');
+  return `<tr><td colspan="${cols}" style="padding:8px 0 4px;">
+    <div style="display:flex; align-items:center; gap:10px; background:linear-gradient(90deg,#eef2ff,#f5f3ff 60%,#fff); border-left:4px solid ${C.indigo}; border-radius:8px; padding:5px 10px;">
+      <div style="width:38px; flex-shrink:0; border-radius:9px; background:linear-gradient(135deg, ${C.indigo}, ${C.violet}); color:#fff; text-align:center; padding:3px 0 4px; box-sizing:border-box;">
+        <div style="font-family:Prompt,Sarabun,sans-serif; font-weight:800; font-size:14px; line-height:18px;">${d.getDate()}</div><div style="font-size:8.5px; line-height:12px;">${TH_MONTHS_SHORT[d.getMonth()]}</div></div>
+      <div style="font-family:Prompt,Sarabun,sans-serif; font-weight:700; font-size:12.5px; line-height:normal; color:${C.navy};">${fmtDate(d)}</div>
+      <div style="padding:2px 10px 3px; border-radius:999px; background:${C.indigo}; color:#fff; font-size:10.5px; line-height:16px; font-weight:700;">${items.length} เหตุการณ์</div>
+      <span style="font-size:11px; line-height:normal;">${topics}</span>
+    </div></td></tr>`;
+}
+// ท้ายรายงาน (แทนช่องลงนาม): สรุปจำนวน + เวลาที่ออกรายงาน
+function rptEnd(m) {
+  const line = `<div style="flex:1; height:1px; background:linear-gradient(90deg, transparent, ${C.line}, transparent);"></div>`;
+  return `<div style="display:flex; align-items:center; gap:12px; margin-top:12px; font-size:11px; line-height:18px; color:${C.muted};">${line}
+    <span>✦ สิ้นสุดรายงาน · รวม <b style="color:${C.indigo};">${m.list.length.toLocaleString('th-TH')}</b> เหตุการณ์ · ข้อมูล ณ ${sheetDate(new Date())} ${sheetTime(new Date())} ✦</span>${line}</div>`;
 }
 
 // สร้างหน้ารายงานจริงใน host นอกจอ แล้ววัดความสูงเพื่อตัดหน้า
@@ -1570,19 +1602,24 @@ async function buildReportPages(m) {
     if (!fits(body) && body.children.length > 1) { blk.remove(); body = newPage(false); body.appendChild(blk); }
   });
   // ส่วนที่ 2: ตารางรายละเอียด — หัวตารางซ้ำทุกหน้า, แถบวันที่คั่นแต่ละวัน (รายสัปดาห์/เดือน)
-  const showDate = m.type !== 'daily', cols = showDate ? 8 : 7;
+  const showDate = m.type !== 'daily', cols = 7;
   let wrap, tb;
   const startTable = (cont) => {
     wrap = document.createElement('div');
     wrap.innerHTML = `<div style="margin-top:8px;">${secHead('📋', cont ? 'รายละเอียดเหตุการณ์ (ต่อ)' : `รายละเอียดเหตุการณ์ (${m.list.length} รายการ)`, C.indigo)}</div>
-      <table style="width:100%; border-collapse:collapse; table-layout:fixed;">${rptTableHead(showDate)}<tbody></tbody></table>`;
+      <div style="border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;"><table style="width:100%; border-collapse:collapse; table-layout:fixed;">${rptTableHead(showDate)}<tbody></tbody></table></div>`;
     body.appendChild(wrap);
     tb = wrap.querySelector('tbody');
   };
-  const nextPage = () => { body = newPage(false); startTable(true); };
+  const nextPage = () => {
+    // หัวตารางที่ยังไม่มีแถวใดเลยในหน้านี้ = หัวตารางค้างท้ายหน้า → เอาออก แล้วไปเริ่มตารางที่หน้าใหม่
+    const orphan = tb && !tb.rows.length, wasFirst = orphan && !/\(ต่อ\)/.test(wrap.textContent);
+    if (orphan) wrap.remove();
+    body = newPage(false); startTable(!wasFirst);
+  };
   startTable(false);
   if (!fits(body)) { wrap.remove(); body = newPage(false); startTable(false); }
-  if (!m.list.length) tb.innerHTML = `<tr><td colspan="${cols}" style="${RS.td} text-align:center; color:${C.muted}; padding:14px;">— ไม่มีการบันทึกเหตุการณ์ในช่วงเวลานี้ —</td></tr>`;
+  if (!m.list.length) tb.innerHTML = `<tr><td colspan="${cols}" style="${RT.td} text-align:center; color:${C.muted}; padding:16px;">— ไม่มีการบันทึกเหตุการณ์ในช่วงเวลานี้ —</td></tr>`;
   // ความสูงของแถวเมื่อวางจริง (วัดแล้วเอาออก) — ใช้ตัดสินว่า "ขึ้นหน้าใหม่" หรือ "แบ่งข้อความต่อหน้า"
   const measure = (html) => { tb.insertAdjacentHTML('beforeend', html); const n = tb.lastElementChild, h = n.getBoundingClientRect().height; n.remove(); return h; };
   const tryPut = (html) => { tb.insertAdjacentHTML('beforeend', html); if (fits(body)) return true; tb.lastElementChild.remove(); return false; };
@@ -1610,7 +1647,7 @@ async function buildReportPages(m) {
   let lastDay = '';
   m.list.forEach((e, idx) => {
     const d = new Date(e.datetime), k = dayKey(d);
-    const header = showDate && k !== lastDay ? dayRow(d, m.perDay.find(x => sameDay(x.d, d)).n, cols) : '';
+    const header = showDate && k !== lastDay ? dayRow(d, m.list.filter(x => sameDay(new Date(x.datetime), d)), cols) : '';
     lastDay = k;
     const row = rptRow(e, idx + 1, showDate);
     // 1) วางได้ทั้งแถบวันที่+แถวในหน้านี้
@@ -1622,11 +1659,11 @@ async function buildReportPages(m) {
     if (header && !tryPut(header)) { nextPage(); tryPut(header); }
     placeLong(e, idx + 1);
   });
-  // ส่วนที่ 3: ช่องลงนาม
-  const sign = document.createElement('div');
-  sign.innerHTML = rptSign();
-  body.appendChild(sign);
-  if (!fits(body)) { sign.remove(); body = newPage(false); body.appendChild(sign); }
+  // ส่วนที่ 3: ท้ายรายงาน (ไม่มีช่องลงนาม)
+  const end = document.createElement('div');
+  end.innerHTML = rptEnd(m);
+  body.appendChild(end);
+  if (!fits(body)) { end.remove(); body = newPage(false); body.appendChild(end); }
   pages.forEach((pg, i) => { pg.querySelector('.rpt-no').textContent = `หน้า ${i + 1} / ${pages.length}`; });
   return pages;
 }
@@ -1702,13 +1739,30 @@ function guardIssue() {
 }
 const rptFileName = (m) => `รายงานบันทึกเหตุการณ์_${RPT_TYPES[m.type]}_${m.no}`;
 const libsReady = () => typeof html2canvas !== 'undefined' && window.jspdf && window.jspdf.jsPDF;
+// ทำไมต้อง onclone: Tailwind (preflight) ตั้ง img { display:block } ทำให้ html2canvas วัดเส้นฐาน (baseline) ของฟอนต์ผิด
+// ตัวอักษรทั้งหน้าจึงถูกวาดต่ำลงหลายพิกเซล (ข้อความหลุดออกจากป้าย/วงกลม) — คืนค่า img เป็น inline เฉพาะในสำเนาที่ใช้วาดภาพ
+const h2cOpts = (scale) => ({
+  scale, useCORS: true, backgroundColor: '#ffffff', width: RPT_W, height: RPT_H, windowWidth: RPT_W, logging: false,
+  onclone: (doc) => { const s = doc.createElement('style'); s.textContent = 'img{display:inline-block !important;}'; doc.head.appendChild(s); }
+});
 // วาดทีละหน้าแล้วส่งต่อทันที (ไม่เก็บทุกหน้าไว้พร้อมกัน) — รายงานรายเดือนหลายสิบหน้าจะไม่กินหน่วยความจำจนเบราว์เซอร์มือถือค้าง
+// html2canvas วัด baseline ฟอนต์ด้วย <img> ชั่วคราวใน document หลัก — Tailwind preflight (img{display:block; vertical-align:middle})
+// ทำให้ค่าวัดเพี้ยน ข้อความในไฟล์จึงต่ำกว่ากล่องสี ~8px → ใส่สไตล์แก้เฉพาะช่วงที่จับภาพ แล้วถอดออก
+function withH2cFix(fn) {
+  const st = document.createElement('style');
+  st.textContent = 'body > div[style*="hidden"] img{display:inline !important; vertical-align:baseline !important;}';
+  document.head.appendChild(st);
+  return Promise.resolve().then(fn).finally(() => st.remove());
+}
 async function capturePages(m, onPage) {
+  return withH2cFix(() => capturePagesInner(m, onPage));
+}
+async function capturePagesInner(m, onPage) {
   const pages = await buildReportPages(m);
   const scale = pages.length > 12 ? 1.5 : 2;
   for (let i = 0; i < pages.length; i++) {
     markActive(); // กันพักหน้าจอระหว่างสร้างไฟล์
-    const c = await html2canvas(pages[i], { scale, useCORS: true, backgroundColor: '#ffffff', width: RPT_W, height: RPT_H, windowWidth: RPT_W, logging: false });
+    const c = await html2canvas(pages[i], h2cOpts(scale));
     await onPage(c, i, pages.length);
     c.width = c.height = 0; // คืนหน่วยความจำ
   }
