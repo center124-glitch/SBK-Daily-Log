@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SBK บันทึกเหตุการณ์ประจำวัน v11 | Daily Log</title>
+<title>SBK บันทึกเหตุการณ์ประจำวัน v12 | Daily Log</title>
 <!--
-  SBK_Daily_Log_v11.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  SBK_Daily_Log_v12.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  v12: • ผู้แจ้ง / ชั้น: เลือกจากรายการ หรือ "➕ เพิ่มเอง" ได้ทันทีในฟอร์ม (จำไว้ในตัวเลือกครั้งถัดไป · แก้/ลบได้ที่หน้าตั้งค่า)
+       • เลือกวันเวลาง่ายขึ้น: วันที่ + ชั่วโมง:นาที แบบ 24 ชม. + ปุ่มลัด (ตอนนี้ / 5–15–30 นาทีก่อน / 1 ชม.ก่อน / วันนี้ / เมื่อวาน)
   v11: • ใบรายงาน: นำช่องลงนาม (ผู้จัดทำ/ผู้ตรวจสอบ/ผู้อนุมัติ) ออก · ตารางรายละเอียดออกแบบใหม่ (เลขลำดับวงกลมสี, ป้ายชั้น/หัวข้อ,
          ผู้แจ้งมีอักษรย่อ, หมายเหตุเป็นป้าย, แถบคั่นวันแบบปฏิทิน) · ท้ายรายงานแสดง "สิ้นสุดรายงาน" + เวลาข้อมูล
   v10: • ช่วงวัน + ตัวกรองอยู่แถวเดียวกัน · รายการแสดงเป็นตาราง "ประวัติบันทึกเหตุการณ์แบบละเอียด" (คอลัมน์ตามการบันทึก)
@@ -56,6 +58,11 @@
   .toast { transition: opacity .3s ease, transform .3s ease; }
   .card-in { animation: cardIn .35s ease both; }
   @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .tchip { padding: 5px 10px; border-radius: 999px; border: 1px solid #c7d2fe; background: #fff; color: #4338ca; font-weight: 600; transition: all .15s; }
+  .tchip:hover { background: #eef2ff; } .tchip:active { transform: scale(.95); }
+  .tchip-main { background: linear-gradient(90deg,#6366f1,#8b5cf6); color: #fff; border-color: transparent; }
+  .dark .tchip { background: #1e293b; border-color: #475569; color: #c7d2fe; } .dark .tchip-main { background: linear-gradient(90deg,#6366f1,#8b5cf6); color:#fff; }
+  .chip-flash { box-shadow: 0 0 0 3px rgba(99,102,241,.45); }
   .clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
@@ -159,7 +166,7 @@
     <div id="spBarWrap" class="mt-8 px-10"><div id="spBar" class="sp-bar"><i></i></div></div>
     <p id="spHint" class="sp-hint text-xs text-white/60 mt-4">กำลังเข้าสู่ระบบ... แตะเพื่อเข้าทันที</p>
   </div>
-  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v11</p>
+  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v12</p>
 </div>
 
 <!-- ================= พื้นหลังเคลื่อนไหว ================= -->
@@ -281,7 +288,7 @@
   </section>
 </main>
 
-<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v11 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
+<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v12 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
 </div>
 
 <!-- ================= Modal: เพิ่ม/แก้ไขบันทึก (ช่องตรงกับหัวคอลัมน์ในชีต) ================= -->
@@ -293,18 +300,37 @@
       <button data-close="entryModal" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">✕</button>
     </div>
     <div class="p-5 space-y-4">
-      <div class="grid grid-cols-3 gap-3">
-        <div class="col-span-2">
-          <label class="text-sm font-medium">ว/ด/ป - เวลา <span class="text-rose-500">*</span></label>
-          <input id="fDate" type="datetime-local" class="inp mt-1">
+      <!-- วันเวลา: เลือกวันที่ + ชั่วโมง : นาที (24 ชม.) หรือกดปุ่มลัด — ค่าจริงเก็บใน #fDate -->
+      <div class="rounded-2xl border border-indigo-100 dark:border-slate-700 bg-indigo-50/50 dark:bg-slate-900/40 p-3">
+        <label class="text-sm font-medium">🗓️ ว/ด/ป - เวลา <span class="text-rose-500">*</span></label>
+        <input id="fDate" type="hidden">
+        <div class="mt-1.5 flex flex-wrap items-center gap-2">
+          <input id="fDay" type="date" class="inp flex-1 min-w-[150px]" aria-label="วันที่">
+          <div class="flex items-center gap-1">
+            <select id="fHour" class="inp !w-[72px] text-center text-lg font-semibold tabular-nums" aria-label="ชั่วโมง"></select>
+            <span class="text-lg font-bold text-slate-400">:</span>
+            <select id="fMin" class="inp !w-[72px] text-center text-lg font-semibold tabular-nums" aria-label="นาที"></select>
+            <span class="text-sm text-slate-500 ml-0.5">น.</span>
+          </div>
         </div>
-        <div>
-          <label class="text-sm font-medium">ชั้น</label>
-          <select id="fFloor" class="inp mt-1"></select>
+        <div id="timeChips" class="mt-2 flex flex-wrap gap-1.5 text-xs">
+          <button type="button" data-ago="0" class="tchip tchip-main">⏱️ ตอนนี้</button>
+          <button type="button" data-ago="5" class="tchip">5 นาทีก่อน</button>
+          <button type="button" data-ago="15" class="tchip">15 นาทีก่อน</button>
+          <button type="button" data-ago="30" class="tchip">30 นาทีก่อน</button>
+          <button type="button" data-ago="60" class="tchip">1 ชม.ก่อน</button>
+          <span class="w-px bg-slate-200 dark:bg-slate-600 mx-0.5"></span>
+          <button type="button" data-day="0" class="tchip">วันนี้</button>
+          <button type="button" data-day="1" class="tchip">เมื่อวาน</button>
         </div>
+        <!-- วัน / เดือน คำนวณจากวันที่อัตโนมัติ (ไม่ต้องกรอก) -->
+        <p id="fAuto" class="mt-2 text-xs font-medium text-indigo-700 dark:text-indigo-300"></p>
       </div>
-      <!-- วัน / เดือน คำนวณจากวันที่อัตโนมัติ (ไม่ต้องกรอก) -->
-      <p id="fAuto" class="-mt-2 text-xs text-slate-500 dark:text-slate-400"></p>
+      <div>
+        <label class="text-sm font-medium">🏢 ชั้น / พื้นที่</label>
+        <select id="fFloor" class="inp mt-1"></select>
+        <input id="fFloorNew" type="text" maxlength="40" placeholder="พิมพ์ชั้นหรือพื้นที่ใหม่ เช่น 7, M, ลานจอดรถ, ทางเชื่อม MRT" class="inp mt-2 hidden">
+      </div>
       <div>
         <label class="text-sm font-medium">หัวข้อเหตุการณ์ <span class="text-rose-500">*</span></label>
         <select id="fTopic" class="inp mt-1"></select>
@@ -317,6 +343,7 @@
       <div>
         <label class="text-sm font-medium">ผู้แจ้ง <span class="text-rose-500">*</span></label>
         <select id="fReporter" class="inp mt-1"></select>
+        <input id="fReporterNew" type="text" maxlength="80" placeholder="พิมพ์ชื่อ-นามสกุลผู้แจ้ง เช่น นาย สมชาย ใจดี" class="inp mt-2 hidden">
       </div>
       <div>
         <label class="text-sm font-medium">หมายเหตุ</label>
@@ -422,6 +449,11 @@
       </div>
       <textarea id="setReporters" rows="6" class="inp mt-1 text-sm resize-y" placeholder="นาย สุนทร อินเดช"></textarea>
     </div>
+    <div>
+      <label class="text-sm font-medium">ชั้น / พื้นที่ที่เพิ่มเอง (บรรทัดละ 1 รายการ)</label>
+      <p class="text-xs text-slate-500 dark:text-slate-400">ชั้นมาตรฐาน B, 1–6, ดาดฟ้า, ภายนอกอาคาร มีอยู่แล้ว · ลบบรรทัดออกเพื่อเอาออกจากตัวเลือก (บันทึกเดิมไม่เปลี่ยน)</p>
+      <textarea id="setFloors" rows="3" class="inp mt-1 text-sm resize-y" placeholder="ลานจอดรถ"></textarea>
+    </div>
     <p id="syncSummary" class="text-sm rounded-xl bg-slate-100 dark:bg-slate-900 px-3 py-2"></p>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
       <button id="btnSaveSettings" class="py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium flex items-center justify-center gap-2">บันทึกการตั้งค่า</button>
@@ -466,13 +498,13 @@
 
 <script>
 /* =====================================================================
-   SBK บันทึกเหตุการณ์ประจำวัน v11 — Single File App
+   SBK บันทึกเหตุการณ์ประจำวัน v12 — Single File App
    โครงสร้าง: ค่าคงที่ → State → Storage → Utilities → Sheets Sync → Render → Modal → ฟอร์ม
              → Export/Import → Theme → PWA → Splash/พักหน้าจอ → พื้นหลังเคลื่อนไหว → Event → Init
    ===================================================================== */
 
 /* ---------- 1) ค่าคงที่ ---------- */
-const APP_VERSION  = 'v11';
+const APP_VERSION  = 'v12';
 // เวอร์ชัน Code.gs ที่ต้องมี: เขียนข้อมูล (9 คอลัมน์) ได้ตั้งแต่ v5, ดึงข้อมูลกลับจากชีตได้ตั้งแต่ v6
 const BACKEND_MIN_WRITE = 5, BACKEND_MIN_PULL = 6;
 // Web App URL ของ Code.gs — ฝังถาวร ทุกเครื่องที่เปิดแอปจะส่ง/ดึงข้อมูลจากชีตเดียวกัน
@@ -511,7 +543,16 @@ const topicOf = (title) => TOPICS.find(t => t.label === title) || OTHER_TOPIC;
 
 // ตัวเลือกชั้น — อ้างอิงชั้นที่ปรากฏจริงในสมุดบันทึกปี 2569 (B, 1–6, ดาดฟ้า) + พื้นที่ภายนอกอาคาร
 const FLOORS = ['B', '1', '2', '3', '4', '5', '6', 'ดาดฟ้า', 'ภายนอกอาคาร'];
-const floorLabel = (f) => !f ? 'ไม่ระบุชั้น' : (/^[B0-9]$/.test(f) ? `ชั้น ${f}` : f);
+// ชั้นมาตรฐานแสดงเป็น "ชั้น X" · ชั้น/พื้นที่ที่ผู้ใช้เพิ่มเอง (เช่น ลานจอดรถ) แสดงตามข้อความจริง
+const floorLabel = (f) => !f ? 'ไม่ระบุชั้น' : (/^(B\d?|\d{1,2}|M|G|LG|UG)$/.test(f) ? `ชั้น ${f}` : f);
+const MAX_FLOOR = 40, MAX_NAME = 80;
+// ทำให้ค่าชั้นเป็นรูปแบบเดียวกันทุกทาง (ฟอร์ม / ชีต / บันทึกเก่า) — idempotent จึงเทียบค่าตอนซิงก์ได้ตรงกันเสมอ
+// "ชั้น 2" → "2", "b" → "B", "ลานจอดรถ" คงเดิม
+function normFloor(v) {
+  let s = cleanName(v == null ? '' : String(v)).replace(/^ชั้น\s*\.?\s*/, '').slice(0, MAX_FLOOR).trim();
+  if (/^(b\d?|m|g|lg|ug)$/i.test(s)) s = s.toUpperCase();
+  return s;
+}
 // รายชื่อผู้แจ้งตามไฟล์รายชื่อที่ได้รับ (25 ท่าน) — แก้เพิ่ม/ลบได้ในหน้าตั้งค่า
 const DEFAULT_REPORTERS = [
   'นาย สิทธิเดช สืบศรี', 'นาย ทัศนัย พาหา', 'นาย นพฤทธิ์ กียะสูต', 'นาย กฤษฎา ศรีมุม', 'นาย สุนทร อินเดช',
@@ -526,7 +567,7 @@ const BULK_SIZE = 40; // ส่งขึ้นชีตทีละไม่เ�
 
 /* ---------- 2) State ---------- */
 let entries = [];
-let settings = { url: GAS_URL, token: '', reporter: '', reporters: [...DEFAULT_REPORTERS], reportersVer: REPORTERS_VER, idleMin: IDLE_DEFAULT };
+let settings = { url: GAS_URL, token: '', reporter: '', reporters: [...DEFAULT_REPORTERS], reportersVer: REPORTERS_VER, floors: [], idleMin: IDLE_DEFAULT };
 let pendingDeletes = [];
 let filterRange = '', filterMonth = '', filterTopic = '', filterReporter = '', filterFloor = '', searchText = '';
 let editingId = null, pendingDeleteId = null, detailId = null;
@@ -556,7 +597,7 @@ function normalizeEntry(e) {
   const area = str(e.area), action = str(e.action);
   if (area && !content.includes(`พื้นที่: ${area}`)) content += `\nพื้นที่: ${area}`;
   if (action && !content.includes(`การดำเนินการ: ${action}`)) content += `\nการดำเนินการ: ${action}`;
-  const floor = FLOORS.includes(e.floor) ? e.floor : extractFloor(area || e.title);
+  const floor = e.floor ? normFloor(e.floor) : extractFloor(area || e.title);
   return {
     id: e.id, datetime: e.datetime, floor, title: cleanName(e.title), content: content.trim(),
     reporter: cleanName(e.reporter), note: str(e.note) || str(e.channel),
@@ -580,6 +621,8 @@ function loadAll() {
     if (!settings.reporters.includes(settings.reporter)) settings.reporter = '';
     writeJson(SETTINGS_KEY, settings);
   }
+  // ชั้น/พื้นที่ที่เพิ่มเอง (v12) — ตัดค่าว่าง/ซ้ำ/ซ้ำกับชั้นมาตรฐานออก
+  settings.floors = [...new Set((Array.isArray(settings.floors) ? settings.floors : []).map(normFloor).filter(f => f && !FLOORS.includes(f)))];
   if (![0, 3, 4, 5].includes(Number(settings.idleMin))) settings.idleMin = IDLE_DEFAULT;
   settings.idleMin = Number(settings.idleMin);
   const dq = readJson(DELQ_KEY, []);
@@ -706,9 +749,8 @@ function rowToEntry(r) {
   if (hh > 23 || mm > 59) return { bad: true, id: String(r.id), why: `เวลา "${ts}"` };
   const d = new Date(y, mo - 1, da, hh, mm);
   if (isNaN(d) || d.getDate() !== da || d.getMonth() !== mo - 1 || y < 2000 || y > 2100) return { bad: true, id: String(r.id), why: `ว/ด/ป "${ds}"` }; // กันวันที่ผิดรูป เช่น 31/2
-  const floor = String(r.floor || '').trim().toUpperCase().replace(/^ชั้น\s*/, '');
   return {
-    id: String(r.id), datetime: d.toISOString(), floor: FLOORS.includes(floor) ? floor : (FLOORS.includes(r.floor) ? r.floor : ''),
+    id: String(r.id), datetime: d.toISOString(), floor: normFloor(r.floor),
     title: cleanName(r.title), content: String(r.content || '').trim(), reporter: cleanName(r.reporter), note: String(r.note || '').trim()
   };
 }
@@ -890,6 +932,8 @@ function getFiltered() {
 }
 const uniqSorted = (arr) => [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'));
 // รายชื่อผู้แจ้ง = รายชื่อที่ตั้งไว้ (เรียงตามที่ตั้ง) + ชื่อที่เคยบันทึกแต่ไม่อยู่ในรายชื่อ
+// ชั้นทั้งหมดที่เลือกได้: มาตรฐาน → ที่เพิ่มเองในเครื่องนี้ → ที่พบในข้อมูล (เช่นเครื่องอื่นเพิ่มไว้แล้วซิงก์มา)
+const allFloors = () => { const base = [...FLOORS, ...(settings.floors || []).filter(f => !FLOORS.includes(f))]; return [...base, ...uniqSorted(entries.map(e => e.floor).filter(Boolean)).filter(f => !base.includes(f))]; };
 const allReporters = () => { const base = settings.reporters || []; return [...base, ...uniqSorted(entries.map(e => e.reporter)).filter(n => !base.includes(n))]; };
 
 /* ---------- 7) Render ---------- */
@@ -925,7 +969,7 @@ function renderFilters() {
   if (filterMonth && !months.includes(filterMonth)) filterMonth = '';
   $('filterMonth').innerHTML = opt('', '🗓️ ทุกเดือน', !filterMonth) + months.map(m => { const [y, mo] = m.split('-').map(Number); return opt(m, fmtMonth(y, mo - 1), m === filterMonth); }).join('');
   $('filterTopic').innerHTML = opt('', '🏷️ ทุกหัวข้อ', !filterTopic) + [...TOPICS, OTHER_TOPIC].map(t => opt(t.label, `${t.icon} ${t.label}`, t.label === filterTopic)).join('');
-  $('filterFloor').innerHTML = opt('', '🏢 ทุกชั้น', !filterFloor) + FLOORS.map(f => opt(f, floorLabel(f), f === filterFloor)).join('') + opt('-', 'ไม่ระบุชั้น', filterFloor === '-');
+  $('filterFloor').innerHTML = opt('', '🏢 ทุกชั้น', !filterFloor) + allFloors().map(f => opt(f, floorLabel(f), f === filterFloor)).join('') + opt('-', 'ไม่ระบุชั้น', filterFloor === '-');
   const reps = allReporters();
   if (filterReporter && !reps.includes(filterReporter)) filterReporter = '';
   $('filterReporter').innerHTML = opt('', '✍️ ผู้แจ้งทุกคน', !filterReporter) + reps.map(a => opt(a, a, a === filterReporter)).join('');
@@ -1149,9 +1193,8 @@ function openForm(id = null) {
   editingId = id;
   const e = id ? entries.find(x => x.id === id) : null;
   $('modalTitle').textContent = e ? 'แก้ไขบันทึกเหตุการณ์' : 'บันทึกเหตุการณ์ใหม่';
-  $('fDate').value = toLocalInput(e ? new Date(e.datetime) : new Date());
-  $('fFloor').innerHTML = `<option value="">— ไม่ระบุ —</option>` + FLOORS.map(f => `<option value="${esc(f)}">${esc(floorLabel(f))}</option>`).join('');
-  $('fFloor').value = e ? (e.floor || '') : '';
+  setFormDate(e ? new Date(e.datetime) : new Date());
+  fillFloorSelect(e ? (e.floor || '') : '');
   // หัวข้อเป็นดรอปดาวน์ประเภทเหตุการณ์ — ถ้าบันทึกเดิมเป็นหัวข้อที่พิมพ์เอง ให้เลือก "อื่นๆ" และแสดงข้อความเดิม
   $('fTopic').innerHTML = `<option value="">— เลือกหัวข้อเหตุการณ์ —</option>` + TOPICS.map(t => `<option value="${esc(t.label)}">${t.icon} ${esc(t.label)}</option>`).join('') + `<option value="${OTHER_KEY}">📦 อื่นๆ (ระบุหัวข้อเอง)</option>`;
   const isKnown = e && TOPICS.some(t => t.label === e.title);
@@ -1161,14 +1204,69 @@ function openForm(id = null) {
   $('fContent').value = e ? e.content : '';
   // ผู้แจ้งเป็นดรอปดาวน์ — บันทึกเก่าที่ชื่อไม่อยู่ในรายชื่อ ยังแสดง/เลือกได้ (ไม่ทำให้ชื่อเดิมหาย)
   const cur = e ? e.reporter : (settings.reporter || '');
-  const names = [...settings.reporters];
-  if (cur && !names.includes(cur)) names.push(cur);
-  $('fReporter').innerHTML = `<option value="">— เลือกผู้แจ้ง —</option>` + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  $('fReporter').value = cur;
+  fillReporterSelect(cur);
   $('fNote').value = e ? e.note : '';
   $('formError').classList.add('hidden');
   renderAutoFields();
   openModal('entryModal');
+}
+const NEW_KEY = '__new';
+// ดรอปดาวน์ชั้น + ตัวเลือก "เพิ่มเอง" (ค่าที่ไม่อยู่ในรายการ เช่นบันทึกเก่า จะถูกเพิ่มเป็นตัวเลือกให้ ไม่หาย)
+function fillFloorSelect(cur) {
+  const list = allFloors(); if (cur && !list.includes(cur)) list.push(cur);
+  $('fFloor').innerHTML = `<option value="">— ไม่ระบุ —</option>` + list.map(f => `<option value="${esc(f)}">${esc(floorLabel(f))}</option>`).join('') + `<option value="${NEW_KEY}">➕ เพิ่มชั้น / พื้นที่เอง...</option>`;
+  $('fFloor').value = cur; $('fFloorNew').value = ''; toggleNewInput('fFloor', 'fFloorNew');
+}
+function fillReporterSelect(cur) {
+  const list = allReporters(); if (cur && !list.includes(cur)) list.push(cur);
+  $('fReporter').innerHTML = `<option value="">— เลือกผู้แจ้ง —</option>` + list.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') + `<option value="${NEW_KEY}">➕ เพิ่มชื่อผู้แจ้งใหม่...</option>`;
+  $('fReporter').value = cur; $('fReporterNew').value = ''; toggleNewInput('fReporter', 'fReporterNew');
+}
+function toggleNewInput(selId, inpId) {
+  const on = $(selId).value === NEW_KEY;
+  $(inpId).classList.toggle('hidden', !on);
+  if (on) setTimeout(() => $(inpId).focus(), 50);
+}
+// ค่าที่พิมพ์เองซ้ำกับรายการเดิม (ต่างแค่ช่องว่าง/ตัวพิมพ์) → ใช้ค่าเดิม กันรายชื่อซ้ำซ้อน
+const matchExisting = (val, list) => list.find(x => x.replace(/\s/g, '').toLowerCase() === val.replace(/\s/g, '').toLowerCase()) || val;
+// จำค่าที่เพิ่มเองไว้ในการตั้งค่า เพื่อให้ครั้งต่อไปเลือกจากดรอปดาวน์ได้เลย
+function rememberCustom(floor, reporter) {
+  let changed = false;
+  if (floor && !FLOORS.includes(floor) && !settings.floors.includes(floor)) { settings.floors.push(floor); changed = true; }
+  if (reporter && !settings.reporters.includes(reporter)) { settings.reporters.push(reporter); changed = true; }
+  if (changed) writeJson(SETTINGS_KEY, settings);
+  return changed;
+}
+
+/* ---- ตัวเลือกวันเวลาแบบง่าย: วันที่ + ชั่วโมง/นาที (24 ชม.) + ปุ่มลัด ---- */
+// เก็บค่าจริงไว้ใน #fDate (รูปแบบ datetime-local) ที่เดียว ส่วนที่ผู้ใช้เห็นเป็นช่องที่เลือกง่ายบนมือถือ
+// ไม่ใช้ datetime-local ตรงๆ เพราะบางเครื่องแสดง AM/PM และต้องแตะหลายขั้น
+function initTimePicker() {
+  $('fHour').innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${pad(h)}">${pad(h)}</option>`).join('');
+  $('fMin').innerHTML = Array.from({ length: 60 }, (_, m) => `<option value="${pad(m)}">${pad(m)}</option>`).join('');
+  const sync = () => {
+    $('fDate').value = $('fDay').value ? `${$('fDay').value}T${$('fHour').value}:${$('fMin').value}` : '';
+    renderAutoFields();
+  };
+  ['fDay', 'fHour', 'fMin'].forEach(id => { $(id).onchange = sync; $(id).oninput = sync; });
+  $('timeChips').onclick = (ev) => {
+    const b = ev.target.closest('[data-ago],[data-day]'); if (!b) return;
+    if (b.dataset.ago != null) setFormDate(new Date(Date.now() - Number(b.dataset.ago) * 60000));
+    else {
+      // เปลี่ยนเฉพาะวัน คงเวลาที่เลือกไว้
+      const cur = new Date($('fDate').value), base = addDays(startOfDay(new Date()), -Number(b.dataset.day));
+      if (!isNaN(cur)) base.setHours(cur.getHours(), cur.getMinutes());
+      setFormDate(base);
+    }
+    b.classList.add('chip-flash'); setTimeout(() => b.classList.remove('chip-flash'), 400);
+  };
+}
+function setFormDate(d) {
+  if (isNaN(d)) return;
+  $('fDay').value = toDateInput(d); $('fDay').max = toDateInput(new Date());
+  $('fHour').value = pad(d.getHours()); $('fMin').value = pad(d.getMinutes());
+  $('fDate').value = toLocalInput(d);
+  renderAutoFields();
 }
 function toggleOtherTitle() {
   const other = $('fTopic').value === OTHER_KEY;
@@ -1178,16 +1276,24 @@ function toggleOtherTitle() {
 // แสดง วัน / เดือน ที่จะลงชีต ให้ผู้บันทึกเห็นก่อนกดบันทึก
 function renderAutoFields() {
   const d = new Date($('fDate').value);
-  $('fAuto').textContent = isNaN(d) ? '' : `📌 ว/ด/ป ${sheetDate(d)} · เวลา ${sheetTime(d)} · ${fmtWeekday(d)} · เดือน${sheetMonth(d)}`;
+  const future = !isNaN(d) && d > new Date(Date.now() + 5 * 60000);
+  $('fAuto').textContent = isNaN(d) ? '⚠️ กรุณาเลือกวันที่' : `📌 ${fmtWeekday(d)} ${sheetDate(d)} · เวลา ${sheetTime(d)} · เดือน${sheetMonth(d)}${future ? '  ⚠️ เป็นเวลาในอนาคต' : ''}`;
+  $('fAuto').classList.toggle('!text-rose-600', future || isNaN(d));
 }
 async function submitForm() {
   const topic = $('fTopic').value;
   const title = topic === OTHER_KEY ? cleanName($('fTitleOther').value) : topic;
-  const content = $('fContent').value.trim(), reporter = $('fReporter').value;
+  const content = $('fContent').value.trim();
+  const repNew = $('fReporter').value === NEW_KEY, floorNew = $('fFloor').value === NEW_KEY;
+  const reporter = repNew ? matchExisting(cleanName($('fReporterNew').value), allReporters()) : $('fReporter').value;
+  const floor = floorNew ? matchExisting(normFloor($('fFloorNew').value), allFloors()) : $('fFloor').value;
   const start = new Date($('fDate').value);
   const err = $('formError');
   const fail = (msg) => { err.textContent = msg; err.classList.remove('hidden'); err.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
 
+  if (repNew && !reporter) return fail('กรุณาพิมพ์ชื่อผู้แจ้งใหม่ (หรือเลือกจากรายชื่อ)');
+  if (floorNew && !floor) return fail('กรุณาพิมพ์ชั้น / พื้นที่ที่ต้องการเพิ่ม (หรือเลือกจากรายการ)');
+  if (reporter.length > MAX_NAME) return fail(`ชื่อผู้แจ้งยาวเกิน ${MAX_NAME} ตัวอักษร`);
   if (isNaN(start.getTime()) || !title || !content || !reporter) return fail(topic === OTHER_KEY && !title ? 'กรุณาระบุหัวข้อเหตุการณ์ (เลือก "อื่นๆ" แล้วต้องพิมพ์หัวข้อ)' : 'กรุณากรอกวันที่-เวลา หัวข้อเหตุการณ์ รายละเอียด และเลือกผู้แจ้งให้ครบถ้วน');
   if (start > new Date(Date.now() + 5 * 60000)) return fail('วันที่-เวลาเป็นเวลาในอนาคต กรุณาตรวจสอบอีกครั้ง');
   if (start.getFullYear() < 2020) return fail('ปีของวันที่ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
@@ -1199,7 +1305,7 @@ async function submitForm() {
   err.classList.add('hidden');
 
   const now = new Date().toISOString();
-  const data = { datetime: start.toISOString(), floor: $('fFloor').value, title, content, reporter, note: $('fNote').value.trim() };
+  const data = { datetime: start.toISOString(), floor, title, content, reporter, note: $('fNote').value.trim() };
   const wasEditing = !!editingId;
   let entry;
   if (editingId) {
@@ -1210,12 +1316,14 @@ async function submitForm() {
 
   // จำชื่อผู้แจ้งประจำเครื่องไว้ใช้ครั้งถัดไป
   if (reporter !== settings.reporter) { settings.reporter = reporter; writeJson(SETTINGS_KEY, settings); }
+  const added = rememberCustom(floor, reporter); // ชื่อ/ชั้นที่เพิ่มเองจะอยู่ในดรอปดาวน์ครั้งถัดไป
 
   saveEntries(); // ถ้าเก็บในเครื่องไม่ได้ ยังส่งขึ้นชีตต่อ (ข้อมูลไม่หาย) — saveEntries แจ้งเตือนเอง
   closeModal('entryModal');
   render();
 
   const ok = await syncEntry(entry);
+  if (added) setTimeout(() => toast('เพิ่มรายชื่อ/ชั้นใหม่ไว้ในตัวเลือกแล้ว (แก้ไขได้ที่หน้าตั้งค่า)', 'info'), 1800);
   if (ok) toast(wasEditing ? 'แก้ไขบันทึกสำเร็จ และอัปเดต Google Sheets แล้ว' : 'บันทึกเหตุการณ์สำเร็จ และส่งขึ้น Google Sheets แล้ว');
   else toast('บันทึกในเครื่องแล้ว แต่ส่งขึ้น Google Sheets ไม่สำเร็จ ระบบจะลองใหม่เมื่อออนไลน์', 'error');
 }
@@ -1243,6 +1351,7 @@ async function doDelete() {
 function openSettings() {
   $('setUrl').value = GAS_URL; $('setToken').value = settings.token || ''; $('setReporter').value = settings.reporter || '';
   $('setReporters').value = (settings.reporters || []).join('\n');
+  $('setFloors').value = (settings.floors || []).join('\n');
   $('reporterList').innerHTML = allReporters().map(a => `<option value="${esc(a)}"></option>`).join('');
   $('setIdle').value = String(settings.idleMin);
   updateSheetBadge(); openModal('sheetModal');
@@ -1251,7 +1360,8 @@ function saveSettings() {
   // ตัดช่องว่าง/ชื่อซ้ำออก แต่คงลำดับที่ผู้ใช้เรียงไว้
   const reporters = [...new Set($('setReporters').value.split(/\r?\n/).map(cleanName).filter(Boolean))];
   if (!reporters.length) { toast('กรุณาใส่รายชื่อผู้แจ้งอย่างน้อย 1 ชื่อ', 'error'); return false; }
-  settings = { url: GAS_URL, token: $('setToken').value.trim(), reporter: cleanName($('setReporter').value), reporters, reportersVer: REPORTERS_VER, idleMin: Number($('setIdle').value) };
+  const floors = [...new Set($('setFloors').value.split(/\r?\n/).map(normFloor).filter(f => f && !FLOORS.includes(f)))];
+  settings = { url: GAS_URL, token: $('setToken').value.trim(), reporter: cleanName($('setReporter').value), reporters, reportersVer: REPORTERS_VER, floors, idleMin: Number($('setIdle').value) };
   writeJson(SETTINGS_KEY, settings);
   render(); markActive();
   const idleTxt = settings.idleMin ? `พักหน้าจอหลัง ${settings.idleMin} นาที` : 'ปิดการพักหน้าจอ';
@@ -2038,8 +2148,10 @@ function handleEvents() {
   $('filterMonth').onchange = (e) => { filterMonth = e.target.value; renderList(); };
   $('rangeChips').onclick = (ev) => { const b = ev.target.closest('[data-range]'); if (b) { filterRange = b.dataset.range; renderFilters(); renderList(); } };
   $('topicSummary').onclick = (ev) => { const b = ev.target.closest('[data-topic]'); if (b) { filterTopic = filterTopic === b.dataset.topic ? '' : b.dataset.topic; renderFilters(); renderList(); } };
-  $('fDate').oninput = renderAutoFields;
   $('fTopic').onchange = toggleOtherTitle;
+  $('fFloor').onchange = () => toggleNewInput('fFloor', 'fFloorNew');
+  $('fReporter').onchange = () => toggleNewInput('fReporter', 'fReporterNew');
+  initTimePicker();
   // ซ่อนข้อความแจ้งเตือนเมื่อผู้ใช้เริ่มแก้ไขฟอร์ม เพื่อไม่ให้ค้างข้อความเก่า
   $('entryModal').addEventListener('input', () => $('formError').classList.add('hidden'));
   $('entryModal').addEventListener('change', () => $('formError').classList.add('hidden'));
