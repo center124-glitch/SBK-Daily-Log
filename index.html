@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SBK บันทึกเหตุการณ์ประจำวัน v12 | Daily Log</title>
+<title>SBK บันทึกเหตุการณ์ประจำวัน v13 | Daily Log</title>
 <!--
-  SBK_Daily_Log_v12.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  SBK_Daily_Log_v13.html — สมุดบันทึกเหตุการณ์ประจำวัน (เหตุการณ์ทั่วไปในพื้นที่)
+  v13: • โลโก้แอปบน PC / หน้าจอโฮม: ตัดขอบมุมโค้ง พื้นหลังโปร่งใส (เดิมเป็นสี่เหลี่ยมมุมแหลม) · Android ยังใช้ไอคอนเต็มกรอบให้ระบบตัดขอบเอง
   v12: • ผู้แจ้ง / ชั้น: เลือกจากรายการ หรือ "➕ เพิ่มเอง" ได้ทันทีในฟอร์ม (จำไว้ในตัวเลือกครั้งถัดไป · แก้/ลบได้ที่หน้าตั้งค่า)
        • เลือกวันเวลาง่ายขึ้น: วันที่ + ชั่วโมง:นาที แบบ 24 ชม. + ปุ่มลัด (ตอนนี้ / 5–15–30 นาทีก่อน / 1 ชม.ก่อน / วันนี้ / เมื่อวาน)
   v11: • ใบรายงาน: นำช่องลงนาม (ผู้จัดทำ/ผู้ตรวจสอบ/ผู้อนุมัติ) ออก · ตารางรายละเอียดออกแบบใหม่ (เลขลำดับวงกลมสี, ป้ายชั้น/หัวข้อ,
@@ -166,7 +167,7 @@
     <div id="spBarWrap" class="mt-8 px-10"><div id="spBar" class="sp-bar"><i></i></div></div>
     <p id="spHint" class="sp-hint text-xs text-white/60 mt-4">กำลังเข้าสู่ระบบ... แตะเพื่อเข้าทันที</p>
   </div>
-  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v12</p>
+  <p class="absolute bottom-3 inset-x-0 text-center text-[11px] text-white/35">SBK Daily Log v13</p>
 </div>
 
 <!-- ================= พื้นหลังเคลื่อนไหว ================= -->
@@ -288,7 +289,7 @@
   </section>
 </main>
 
-<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v12 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
+<footer class="text-center text-xs text-slate-500 dark:text-slate-400 py-8">SBK Daily Log v13 · ข้อมูลซิงก์กับ Google Sheets อัตโนมัติ (ส่งขึ้นและดึงกลับ) · แนะนำให้สำรอง JSON เป็นระยะ</footer>
 </div>
 
 <!-- ================= Modal: เพิ่ม/แก้ไขบันทึก (ช่องตรงกับหัวคอลัมน์ในชีต) ================= -->
@@ -498,13 +499,13 @@
 
 <script>
 /* =====================================================================
-   SBK บันทึกเหตุการณ์ประจำวัน v12 — Single File App
+   SBK บันทึกเหตุการณ์ประจำวัน v13 — Single File App
    โครงสร้าง: ค่าคงที่ → State → Storage → Utilities → Sheets Sync → Render → Modal → ฟอร์ม
              → Export/Import → Theme → PWA → Splash/พักหน้าจอ → พื้นหลังเคลื่อนไหว → Event → Init
    ===================================================================== */
 
 /* ---------- 1) ค่าคงที่ ---------- */
-const APP_VERSION  = 'v12';
+const APP_VERSION  = 'v13';
 // เวอร์ชัน Code.gs ที่ต้องมี: เขียนข้อมูล (9 คอลัมน์) ได้ตั้งแต่ v5, ดึงข้อมูลกลับจากชีตได้ตั้งแต่ v6
 const BACKEND_MIN_WRITE = 5, BACKEND_MIN_PULL = 6;
 // Web App URL ของ Code.gs — ฝังถาวร ทุกเครื่องที่เปิดแอปจะส่ง/ดึงข้อมูลจากชีตเดียวกัน
@@ -1940,20 +1941,29 @@ function initTheme() {
 // ทำไมสร้าง manifest ด้วย JS: ต้องการให้ยังเป็นไฟล์ HTML ไฟล์เดียว จึงวาด PNG จาก SVG ในตัว แล้วสร้าง manifest เป็น Blob URL
 // ข้อจำกัด: การติดตั้งต้องเปิดผ่าน https (เช่น GitHub Pages) — ถ้าเปิดจาก file:// เบราว์เซอร์จะไม่ให้ติดตั้ง
 let deferredInstall = null;
-function svgToPng(size) {
+function svgToPng(size, opaque) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       try {
         const c = document.createElement('canvas'); c.width = c.height = size;
         const ctx = c.getContext('2d');
-        ctx.fillStyle = '#4f46e5'; ctx.fillRect(0, 0, size, size); // พื้นเต็มกรอบ รองรับไอคอนแบบ maskable ของ Android
-        ctx.drawImage(img, 0, 0, size, size);
+        if (opaque) {
+          // maskable: SVG ฉบับพื้นเต็มกรอบ (เตรียมไว้แล้วใน src) — Android ตัดขอบเป็นวงกลม/มุมโค้งเอง
+          ctx.drawImage(img, 0, 0, size, size);
+        } else {
+          // any: ตัดมุมโค้งด้วย clip แล้ววาดบนพื้นโปร่งใส — PC แสดงไอคอนมุมโค้งเหมือนแอปอื่น
+          const r = size * 0.22;
+          ctx.beginPath(); ctx.moveTo(r, 0); ctx.arcTo(size, 0, size, size, r); ctx.arcTo(size, size, 0, size, r); ctx.arcTo(0, size, 0, 0, r); ctx.arcTo(0, 0, size, 0, r); ctx.closePath();
+          ctx.clip(); ctx.drawImage(img, 0, 0, size, size);
+        }
         resolve(c.toDataURL('image/png'));
       } catch (e) { resolve(null); }
     };
     img.onerror = () => resolve(null);
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(LOGO_SVG);
+    // maskable: พื้นไล่สีเต็มกรอบ (ไม่มีมุมโค้ง) + ย่อภาพด้านในให้อยู่ใน safe zone เพื่อไม่ให้นาฬิกาถูกตัด
+    const src = !opaque ? LOGO_SVG : LOGO_SVG.replace(/(<rect width="512" height="512") rx="\d+"( fill="url\(#g\)"\/>)/, '$1$2<g transform="translate(256 256) scale(.8) translate(-256 -256)">').replace('</svg>', '</g></svg>');
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
   });
 }
 async function setupPwa() {
@@ -1966,8 +1976,8 @@ async function setupPwa() {
 
   if (!/^https?:$/.test(location.protocol)) return;
   try {
-    const [p192, p512] = await Promise.all([svgToPng(192), svgToPng(512)]);
-    if (!p192 || !p512) return;
+    const [p192, p512, m512] = await Promise.all([svgToPng(192), svgToPng(512), svgToPng(512, true)]);
+    if (!p192 || !p512 || !m512) return;
     const base = location.href.split('#')[0].split('?')[0];
     const manifest = {
       name: 'SBK บันทึกเหตุการณ์ประจำวัน', short_name: 'บันทึกเหตุการณ์', description: 'สมุดบันทึกเหตุการณ์ประจำวัน ศูนย์การค้าซีคอนบางแค',
@@ -1976,7 +1986,7 @@ async function setupPwa() {
       icons: [
         { src: p192, sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: p512, sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: p512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        { src: m512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
       ]
     };
     const link = document.createElement('link');
